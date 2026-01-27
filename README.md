@@ -1,6 +1,7 @@
 # ainvoke
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalagman/ainvoke)](https://goreportcard.com/report/github.com/metalagman/ainvoke)
+[![Go Reference](https://pkg.go.dev/badge/github.com/metalagman/ainvoke.svg)](https://pkg.go.dev/github.com/metalagman/ainvoke)
 [![lint](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml)
 [![test](https://github.com/metalagman/ainvoke/actions/workflows/test.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/test.yml)
 [![codecov](https://codecov.io/github/metalagman/ainvoke/graph/badge.svg)](https://codecov.io/github/metalagman/ainvoke)
