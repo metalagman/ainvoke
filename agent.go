@@ -92,8 +92,6 @@ func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 	return outBytes, errBytes, exitCode, runErr
 }
 
-func (r *execRunner) effectiveWorkDir(inv Invocation) string { return inv.RunDir }
-
 func (r *execRunner) runWithOptions(
 	ctx context.Context,
 	inv Invocation,
@@ -104,7 +102,7 @@ func (r *execRunner) runWithOptions(
 		return runCommandWithTTY(
 			ctx,
 			r.cmd,
-			r.effectiveWorkDir(inv),
+			inv.RunDir,
 			stdin,
 			runOpts.stdout,
 		)
@@ -113,7 +111,7 @@ func (r *execRunner) runWithOptions(
 	return runCommand(
 		ctx,
 		r.cmd,
-		r.effectiveWorkDir(inv),
+		inv.RunDir,
 		stdin,
 		runOpts.stdout,
 		runOpts.stderr,
