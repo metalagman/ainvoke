@@ -84,6 +84,14 @@ Flags:
 Defaults:
 - Runs in headless mode (no TTY).
 
+```bash
+ainvoke claude \
+  --model="claude-3-5-sonnet-latest" \
+  --prompt="Input is a name, answer as Salam, <name>!" \
+  --input='{"input":"Bro"}' \
+  --work-dir=.
+```
+
 ### codex (wrapper with default flags)
 
 Flags:
