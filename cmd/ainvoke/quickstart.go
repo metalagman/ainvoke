@@ -27,21 +27,21 @@ func printQuickstart() {
      --output-schema='{"type":"string"}' \
      --prompt="Input is a name, answer as Hello, <name>!" \
      --input="Bro" \
-     --extra-args="--model=gpt-5.1-codex-mini"
+     --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write"
 
-2. Codex Wrapper
+2. Claude Wrapper
+   Run Claude agents with default flags.
+
+   ainvoke claude \
+     --model="claude-3-5-sonnet-latest" \
+     --prompt="Input is a name, answer as Salam, <name>!" \
+     --input="Bro"
+
+3. Codex Wrapper
    Simplified invocation for Codex agents.
 
    ainvoke codex \
      --model="gpt-5.1-codex-mini" \
-     --prompt="Input is a name, answer as Salam, <name>!" \
-     --input="Bro"
-
-3. OpenCode Wrapper
-   Run OpenCode agents with default flags.
-
-   ainvoke opencode \
-     --model="opencode/big-pickle" \
      --prompt="Input is a name, answer as Salam, <name>!" \
      --input="Bro"
 
@@ -50,6 +50,14 @@ func printQuickstart() {
 
    ainvoke gemini \
      --model="gemini-3-flash-preview" \
+     --prompt="Input is a name, answer as Salam, <name>!" \
+     --input="Bro"
+
+5. OpenCode Wrapper
+   Run OpenCode agents with default flags.
+
+   ainvoke opencode \
+     --model="opencode/big-pickle" \
      --prompt="Input is a name, answer as Salam, <name>!" \
      --input="Bro"
 

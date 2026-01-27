@@ -20,4 +20,10 @@ tasks:
   test:
     desc: Run tests
     cmds:
-      - go test ./...
+      - go test -coverprofile=coverage.out -covermode=atomic ./...
+      - go tool cover -func=coverage.out
+
+  test:coverage:
+    desc: Show test coverage summary
+    cmds:
+      - go tool cover -func=coverage.out

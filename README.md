@@ -1,8 +1,21 @@
 # ainvoke
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/metalagman/ainvoke)](https://goreportcard.com/report/github.com/metalagman/ainvoke)
+[![lint](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml)
+[![test](https://github.com/metalagman/ainvoke/actions/workflows/test.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/test.yml)
+[![codecov](https://codecov.io/github/metalagman/ainvoke/graph/badge.svg)](https://codecov.io/github/metalagman/ainvoke)
+[![version](https://img.shields.io/github/v/release/metalagman/ainvoke?sort=semver)](https://github.com/metalagman/ainvoke/releases)
+[![license](https://img.shields.io/github/license/metalagman/ainvoke)](LICENSE)
+
 ainvoke provides a focused runner for invoking agent CLIs with a normalized JSON I/O contract.
 
 ## Installation
+
+### Pre-built binaries
+
+Download the latest pre-built binaries for your platform from the [GitHub Releases](https://github.com/metalagman/ainvoke/releases) page.
+
+### From source
 
 ```bash
 go get github.com/metalagman/ainvoke
@@ -27,6 +40,14 @@ ainvoke <command> [flags]
 - `--work-dir`
 - `--debug` (forward agent stdout/stderr to stderr)
 
+### quickstart
+
+Displays a guide with common usage examples and instructions for all supported agents.
+
+```bash
+ainvoke quickstart
+```
+
 ### exec (generic runner)
 
 Flags:
@@ -39,7 +60,7 @@ ainvoke exec codex \
   --output-schema='{"type":"string"}' \
   --prompt="input is a name, answer as Hello, <name>!" \
   --input="Bro" \
-  --extra-args="--model=gpt-5.1-codex-mini" \
+  --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write" \
   --work-dir=.
 ```
 
@@ -49,9 +70,18 @@ ainvoke exec codex \
   --output-schema-file=./schemas/output.json \
   --prompt="input is a name, answer as Hello, <name>!" \
   --input="Bro" \
-  --extra-args="--model=gpt-5.1-codex-mini" \
+  --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write" \
   --work-dir=.
 ```
+
+### claude (wrapper, no defaults)
+
+Flags:
+- Common flags
+- `--model` (optional)
+
+Defaults:
+- Runs in headless mode (no TTY).
 
 ### codex (wrapper with default flags)
 
@@ -81,24 +111,6 @@ ainvoke codex \
   --work-dir=.
 ```
 
-### opencode (wrapper with default flags)
-
-Flags:
-- Common flags
-- `--model` (optional)
-
-Defaults:
-- Inserts `run` subcommand when missing.
-- Runs in headless mode (no TTY).
-
-```bash
-ainvoke opencode \
-  --model="opencode/big-pickle" \
-  --prompt="Input is a name, answer as Salam, <name>!" \
-  --input="Bro" \
-  --work-dir=.
-```
-
 ### gemini (wrapper with default flags)
 
 Flags:
@@ -117,14 +129,23 @@ ainvoke gemini \
   --work-dir=.
 ```
 
-### claude (wrapper, no defaults)
+### opencode (wrapper with default flags)
 
 Flags:
 - Common flags
 - `--model` (optional)
 
 Defaults:
+- Inserts `run` subcommand when missing.
 - Runs in headless mode (no TTY).
+
+```bash
+ainvoke opencode \
+  --model="opencode/big-pickle" \
+  --prompt="Input is a name, answer as Salam, <name>!" \
+  --input="Bro" \
+  --work-dir=.
+```
 
 Notes:
 - Use `--input-schema-file` or `--output-schema-file` to load schemas from files.
