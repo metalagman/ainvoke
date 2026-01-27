@@ -39,6 +39,7 @@ func resolveRunOptions(opts []RunOption) (RunOptions, error) {
 	if out.stdout == nil {
 		return RunOptions{}, fmt.Errorf("stdout must not be nil")
 	}
+
 	if out.stderr == nil {
 		return RunOptions{}, fmt.Errorf("stderr must not be nil")
 	}
