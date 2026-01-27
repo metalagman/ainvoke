@@ -23,10 +23,10 @@ func printQuickstart() {
    Run any agent command with normalized I/O.
 
    ainvoke exec codex \
-     --input-schema='{"type":"string"}' \
-     --output-schema='{"type":"string"}' \
+     --input-schema='{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}' \
+     --output-schema='{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}' \
      --prompt="Input is a name, answer as Hello, <name>!" \
-     --input="Bro" \
+     --input='{"input":"Bro"}' \
      --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write"
 
 2. Claude Wrapper
@@ -35,7 +35,7 @@ func printQuickstart() {
    ainvoke claude \
      --model="claude-3-5-sonnet-latest" \
      --prompt="Input is a name, answer as Salam, <name>!" \
-     --input="Bro"
+     --input='{"input":"Bro"}'
 
 3. Codex Wrapper
    Simplified invocation for Codex agents.
@@ -43,7 +43,7 @@ func printQuickstart() {
    ainvoke codex \
      --model="gpt-5.1-codex-mini" \
      --prompt="Input is a name, answer as Salam, <name>!" \
-     --input="Bro"
+     --input='{"input":"Bro"}'
 
 4. Gemini Wrapper
    Run Gemini agents with default flags.
@@ -51,7 +51,7 @@ func printQuickstart() {
    ainvoke gemini \
      --model="gemini-3-flash-preview" \
      --prompt="Input is a name, answer as Salam, <name>!" \
-     --input="Bro"
+     --input='{"input":"Bro"}'
 
 5. OpenCode Wrapper
    Run OpenCode agents with default flags.
@@ -59,7 +59,7 @@ func printQuickstart() {
    ainvoke opencode \
      --model="opencode/big-pickle" \
      --prompt="Input is a name, answer as Salam, <name>!" \
-     --input="Bro"
+     --input='{"input":"Bro"}'
 
 See README.md for more details.`)
 }

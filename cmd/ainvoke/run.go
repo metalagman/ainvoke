@@ -30,8 +30,8 @@ type agentOptions struct {
 }
 
 func addCommonFlags(cmd *cobra.Command, opts *agentOptions, includeTTY bool) {
-	cmd.Flags().StringVar(&opts.inputSchema, "input-schema", defaultSchema, "input JSON schema")
-	cmd.Flags().StringVar(&opts.outputSchema, "output-schema", defaultSchema, "output JSON schema")
+	cmd.Flags().StringVar(&opts.inputSchema, "input-schema", defaultInputSchema, "input JSON schema")
+	cmd.Flags().StringVar(&opts.outputSchema, "output-schema", defaultOutputSchema, "output JSON schema")
 	cmd.Flags().StringVar(&opts.inputSchemaFile, "input-schema-file", "", "path to input JSON schema file")
 	cmd.Flags().StringVar(&opts.outputSchemaFile, "output-schema-file", "", "path to output JSON schema file")
 	cmd.Flags().StringVar(&opts.prompt, "prompt", "", "system prompt for the agent")

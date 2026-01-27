@@ -2,7 +2,8 @@ package main
 
 import "github.com/spf13/cobra"
 
-const defaultSchema = `{"type":"string"}`
+const defaultInputSchema = `{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}`
+const defaultOutputSchema = `{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}`
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{

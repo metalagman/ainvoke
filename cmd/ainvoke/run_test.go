@@ -127,17 +127,17 @@ func TestParseInputValue(t *testing.T) {
 func TestBuildRunConfig(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		opts := &agentOptions{
-			inputSchema:  `{"type":"string"}`,
-			outputSchema: `{"type":"string"}`,
+			inputSchema:  defaultInputSchema,
+			outputSchema: defaultOutputSchema,
 			prompt:       "test prompt",
-			input:        "test input",
+			input:        `{"input":"test input"}`,
 			workDir:      ".",
 			model:        "test-model",
 		}
 		agentCmd := []string{"test-agent"}
 
 		cmd := newExecCmd()
-		cmd.Flags().Set("input", "test input")
+		cmd.Flags().Set("input", `{"input":"test input"}`)
 
 		cfg, err := buildRunConfig(cmd, agentCmd, opts)
 		if err != nil {
@@ -152,18 +152,19 @@ func TestBuildRunConfig(t *testing.T) {
 			t.Errorf("expected prompt %s, got %s", opts.prompt, cfg.inv.SystemPrompt)
 		}
 
-		if cfg.inv.Input != opts.input {
-			t.Errorf("expected input %s, got %v", opts.input, cfg.inv.Input)
+		expectedInput := map[string]any{"input": "test input"}
+		if !reflect.DeepEqual(cfg.inv.Input, expectedInput) {
+			t.Errorf("expected input %v, got %v", expectedInput, cfg.inv.Input)
 		}
 	})
 
 	t.Run("schema error", func(t *testing.T) {
 		opts := &agentOptions{
-			inputSchema:     `{"type":"string"}`,
+			inputSchema:     defaultInputSchema,
 			inputSchemaFile: "some-file.json",
 		}
 		cmd := newExecCmd()
-		cmd.Flags().Set("input-schema", `{"type":"string"}`)
+		cmd.Flags().Set("input-schema", defaultInputSchema)
 
 		_, err := buildRunConfig(cmd, []string{"test"}, opts)
 		if err == nil {

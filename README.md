@@ -30,8 +30,8 @@ ainvoke <command> [flags]
 ```
 
 ### Common flags (all commands)
-- `--input-schema` (default `{"type":"string"}`)
-- `--output-schema` (default `{"type":"string"}`)
+- `--input-schema` (default `{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}`)
+- `--output-schema` (default `{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}`)
 - `--input-schema-file`
 - `--output-schema-file`
 - `--prompt`
@@ -56,10 +56,10 @@ Flags:
 
 ```bash
 ainvoke exec codex \
-  --input-schema='{"type":"string"}' \
-  --output-schema='{"type":"string"}' \
+  --input-schema='{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}' \
+  --output-schema='{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}' \
   --prompt="input is a name, answer as Hello, <name>!" \
-  --input="Bro" \
+  --input='{"input":"Bro"}' \
   --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write" \
   --work-dir=.
 ```
@@ -69,7 +69,7 @@ ainvoke exec codex \
   --input-schema-file=./schemas/input.json \
   --output-schema-file=./schemas/output.json \
   --prompt="input is a name, answer as Hello, <name>!" \
-  --input="Bro" \
+  --input='{"input":"Bro"}' \
   --extra-args="--model=gpt-5.1-codex-mini,--sandbox=workspace-write" \
   --work-dir=.
 ```
@@ -97,16 +97,16 @@ Defaults:
 ainvoke codex \
   --model="gpt-5.1-codex-mini" \
   --prompt="Input is a name, answer as Salam, <name>!" \
-  --input="Bro" \
+  --input='{"input":"Bro"}' \
   --work-dir=.
 ```
 
 ```bash
 ainvoke codex \
-  --input-schema='{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}' \
-  --output-schema='{"type":"object","properties":{"greeting":{"type":"string"}},"required":["greeting"]}' \
-  --prompt="Use the input name and output greeting in the greeting field." \
-  --input='{"name":"Bro"}' \
+  --input-schema='{"type":"string"}' \
+  --output-schema='{"type":"string"}' \
+  --prompt="Input is a name, answer as Salam, <name>!" \
+  --input="Bro" \
   --model="gpt-5.1-codex-mini" \
   --work-dir=.
 ```
@@ -125,7 +125,7 @@ Defaults:
 ainvoke gemini \
   --model="gemini-3-flash-preview" \
   --prompt="Input is a name, answer as Salam, <name>!" \
-  --input="Bro" \
+  --input='{"input":"Bro"}' \
   --work-dir=.
 ```
 
@@ -143,7 +143,7 @@ Defaults:
 ainvoke opencode \
   --model="opencode/big-pickle" \
   --prompt="Input is a name, answer as Salam, <name>!" \
-  --input="Bro" \
+  --input='{"input":"Bro"}' \
   --work-dir=.
 ```
 
@@ -158,8 +158,8 @@ Notes:
 #### Object schemas
 
 ```go
-const inputSchema = `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`
-const outputSchema = `{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`
+const inputSchema = `{"type":"string"}`
+const outputSchema = `{"type":"string"}`
 ```
 
 #### String schemas
