@@ -158,8 +158,8 @@ Notes:
 #### Object schemas
 
 ```go
-const inputSchema = `{"type":"string"}`
-const outputSchema = `{"type":"string"}`
+const inputSchema = `{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}`
+const outputSchema = `{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}`
 ```
 
 #### String schemas
