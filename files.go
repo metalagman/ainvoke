@@ -1,4 +1,3 @@
-// Package ainvoke provides implementations for running different types of agents.
 package ainvoke
 
 const (
