@@ -133,3 +133,66 @@ func TestAppendGeminiFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestAppendClaudeFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		argv     []string
+		model    string
+		expected []string
+	}{
+		{
+			name:     "minimal",
+			argv:     []string{"claude"},
+			model:    "",
+			expected: []string{"claude"},
+		},
+		{
+			name:     "with model",
+			argv:     []string{"claude"},
+			model:    "sonnet",
+			expected: []string{"claude", "--model", "sonnet"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := appendClaudeFlags(tt.argv, tt.model)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("appendClaudeFlags() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSubcommandChecks(t *testing.T) {
+	t.Run("codex", func(t *testing.T) {
+		valid := []string{"exec", "review", "login", "help"}
+		for _, s := range valid {
+			if !isCodexSubcommand(s) {
+				t.Errorf("expected %s to be valid", s)
+			}
+		}
+		invalid := []string{"", "--flag", "unknown"}
+		for _, s := range invalid {
+			if isCodexSubcommand(s) {
+				t.Errorf("expected %s to be invalid", s)
+			}
+		}
+	})
+
+	t.Run("opencode", func(t *testing.T) {
+		valid := []string{"agent", "run", "help"}
+		for _, s := range valid {
+			if !isOpenCodeSubcommand(s) {
+				t.Errorf("expected %s to be valid", s)
+			}
+		}
+		invalid := []string{"unknown"}
+		for _, s := range invalid {
+			if isOpenCodeSubcommand(s) {
+				t.Errorf("expected %s to be invalid", s)
+			}
+		}
+	})
+}

@@ -123,3 +123,68 @@ func TestParseInputValue(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildRunConfig(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		opts := &agentOptions{
+			inputSchema:  `{"type":"string"}`,
+			outputSchema: `{"type":"string"}`,
+			prompt:       "test prompt",
+			input:        "test input",
+			workDir:      ".",
+			model:        "test-model",
+		}
+		agentCmd := []string{"test-agent"}
+
+		cmd := newExecCmd()
+		cmd.Flags().Set("input", "test input")
+
+		cfg, err := buildRunConfig(cmd, agentCmd, opts)
+		if err != nil {
+			t.Fatalf("buildRunConfig failed: %v", err)
+		}
+
+		if cfg.runDir != opts.workDir {
+			t.Errorf("expected runDir %s, got %s", opts.workDir, cfg.runDir)
+		}
+
+		if cfg.inv.SystemPrompt != opts.prompt {
+			t.Errorf("expected prompt %s, got %s", opts.prompt, cfg.inv.SystemPrompt)
+		}
+
+		if cfg.inv.Input != opts.input {
+			t.Errorf("expected input %s, got %v", opts.input, cfg.inv.Input)
+		}
+	})
+
+	t.Run("schema error", func(t *testing.T) {
+		opts := &agentOptions{
+			inputSchema:     `{"type":"string"}`,
+			inputSchemaFile: "some-file.json",
+		}
+		cmd := newExecCmd()
+		cmd.Flags().Set("input-schema", `{"type":"string"}`)
+
+		_, err := buildRunConfig(cmd, []string{"test"}, opts)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestReadOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	content := []byte(`{"result":"ok"}`)
+	if err := os.WriteFile(filepath.Join(tmpDir, "output.json"), content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readOutput(tmpDir)
+	if err != nil {
+		t.Fatalf("readOutput failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(got, content) {
+		t.Errorf("expected %s, got %s", string(content), string(got))
+	}
+}
