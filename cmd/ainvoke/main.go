@@ -1,3 +1,4 @@
+// Package main is the entry point for the ainvoke CLI.
 package main
 
 import "os"

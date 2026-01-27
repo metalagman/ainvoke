@@ -7,7 +7,7 @@ func newCodexCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "codex",
 		Short: "Invoke codex with normalized JSON I/O",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			agentCmd := append([]string{"codex"}, opts.extraArgs...)
 			agentCmd = appendCodexFlags(agentCmd, opts.model)
 

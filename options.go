@@ -3,6 +3,8 @@ package ainvoke
 import "io"
 
 //go:generate go tool options-gen -from-struct=RunOptions -out-filename=options_generated.go -defaults-from=func=defaultRunOptions
+
+// RunOptions defines the configuration for running an agent.
 type RunOptions struct {
 	stdout io.Writer `validate:"required"`
 	stderr io.Writer `validate:"required"`

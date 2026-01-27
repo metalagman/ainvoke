@@ -7,7 +7,7 @@ func newOpenCodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "opencode",
 		Short: "Invoke opencode with normalized JSON I/O",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			agentCmd := append([]string{"opencode"}, opts.extraArgs...)
 			agentCmd = appendOpenCodeFlags(agentCmd, opts.model)
 

@@ -7,7 +7,7 @@ func newClaudeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "claude",
 		Short: "Invoke claude with normalized JSON I/O",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			agentCmd := append([]string{"claude"}, opts.extraArgs...)
 			agentCmd = appendClaudeFlags(agentCmd, opts.model)
 

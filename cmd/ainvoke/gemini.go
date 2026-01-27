@@ -7,7 +7,7 @@ func newGeminiCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gemini",
 		Short: "Invoke gemini with normalized JSON I/O",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			agentCmd := append([]string{"gemini"}, opts.extraArgs...)
 			agentCmd = appendGeminiFlags(agentCmd, opts.model)
 
