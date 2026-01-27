@@ -16,6 +16,14 @@ func appendCodexFlags(argv []string, model string) []string {
 		out = append(out, "--model", model)
 	}
 
+	if !hasFlag(out, "--sandbox") {
+		out = append(out, "--sandbox", "workspace-write")
+	}
+
+	if !hasFlag(out, "--ask-for-approval") {
+		out = append(out, "--ask-for-approval", "never")
+	}
+
 	return out
 }
 
