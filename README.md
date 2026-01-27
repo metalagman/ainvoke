@@ -190,6 +190,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/metalagman/ainvoke"
@@ -202,24 +203,24 @@ func main() {
 	const inputSchema = `{
   "type":"object",
   "properties":{
-    "name":{"type":"string"}
+    "input":{"type":"string"}
   },
-  "required":["name"]
+  "required":["input"]
 }`
 
 	const outputSchema = `{
   "type":"object",
   "properties":{
-    "result":{"type":"string"}
+    "output":{"type":"string"}
   },
-  "required":["result"]
+  "required":["output"]
 }`
 
 	inv := ainvoke.Invocation{
 		RunDir: runDir,
-		SystemPrompt: `Output "Hello, <name>!" in the result field.`,
+		SystemPrompt: `Output "Hello, <input>!" in the output field.`,
 		Input: map[string]any{
-			"name": "Ada",
+			"input": "Ada",
 		},
 		InputSchema:  inputSchema,
 		OutputSchema: outputSchema,
@@ -231,7 +232,7 @@ func main() {
 
 	runner, err := ainvoke.NewRunner(cfg)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	stdout, _ := os.Create("stdout.log")
@@ -246,7 +247,7 @@ func main() {
 		ainvoke.WithStderr(stderr),
 	)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 ```
