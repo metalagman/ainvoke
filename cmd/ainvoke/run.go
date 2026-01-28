@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var exitFn = os.Exit
+
 type agentOptions struct {
 	inputSchema      string
 	outputSchema     string
@@ -222,10 +224,11 @@ func exitWithError(code int, errBytes []byte, err error) error {
 	}
 
 	if code != 0 {
-		os.Exit(code)
+		exitFn(code)
+		return nil
 	}
 
-	os.Exit(1)
+	exitFn(1)
 
 	return nil
 }
