@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -72,7 +73,7 @@ func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 	outBytes, errBytes, exitCode, runErr := r.runWithOptions(ctx, inv, []byte(prompt), runOpts)
 	if runErr != nil {
 		if exitCode != 0 {
-			runErr = fmt.Errorf("%w: exit code %d: %v", ErrRunFailed, exitCode, runErr)
+			runErr = fmt.Errorf("exit code %d: %w", exitCode, errors.Join(ErrRunFailed, runErr))
 		}
 
 		return outBytes, errBytes, exitCode, runErr
