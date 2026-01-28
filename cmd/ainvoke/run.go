@@ -193,7 +193,7 @@ func runAndEmit(ctx context.Context, cfg runConfig) error {
 			errBytes = outBytes
 		}
 
-		return exitWithError(exitCode, errBytes, err)
+		return exitWithError(exitCode, errBytes, fmt.Errorf("run invocation: %w", err))
 	}
 
 	output, err := readOutput(cfg.runDir)
