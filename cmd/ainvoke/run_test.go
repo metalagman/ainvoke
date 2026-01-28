@@ -1,10 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
+
+	"github.com/metalagman/ainvoke"
 )
 
 func TestResolveSchema(t *testing.T) {
@@ -187,5 +194,163 @@ func TestReadOutput(t *testing.T) {
 
 	if !reflect.DeepEqual(got, content) {
 		t.Errorf("expected %s, got %s", string(content), string(got))
+	}
+}
+
+func TestRunAndEmitWritesOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	expected := []byte(`{"output":"ok"}`)
+	if err := os.WriteFile(filepath.Join(tmpDir, ainvoke.OutputFileName), expected, 0o644); err != nil {
+		t.Fatalf("write output: %v", err)
+	}
+
+	cfg := runConfig{
+		runDir: tmpDir,
+		runner: fakeRunner{},
+	}
+
+	stdout, restore := captureFile(t, &os.Stdout)
+	defer restore()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	restore()
+	if !bytes.Equal(stdout.Bytes(), expected) {
+		t.Fatalf("expected stdout %q, got %q", expected, stdout.Bytes())
+	}
+}
+
+func TestRunAndEmitErrorWritesErrBytes(t *testing.T) {
+	cfg := runConfig{
+		runner: fakeRunner{
+			err:      errors.New("kaboom"),
+			exitCode: 3,
+			errBytes: []byte("stderr payload"),
+		},
+	}
+
+	var exitCode int
+	restoreExit := overrideExit(t, func(code int) { exitCode = code })
+	defer restoreExit()
+
+	stderr, restore := captureFile(t, &os.Stderr)
+	defer restore()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	restore()
+	if exitCode != 3 {
+		t.Fatalf("expected exit code 3, got %d", exitCode)
+	}
+
+	if !bytes.Contains(stderr.Bytes(), []byte("stderr payload")) {
+		t.Fatalf("expected stderr payload, got %q", stderr.Bytes())
+	}
+	if !bytes.Contains(stderr.Bytes(), []byte("kaboom")) {
+		t.Fatalf("expected error message, got %q", stderr.Bytes())
+	}
+}
+
+func TestRunAndEmitErrorFallsBackToStdout(t *testing.T) {
+	cfg := runConfig{
+		runner: fakeRunner{
+			err:      errors.New("failed"),
+			exitCode: 2,
+			outBytes: []byte("stdout fallback"),
+		},
+	}
+
+	var exitCode int
+	restoreExit := overrideExit(t, func(code int) { exitCode = code })
+	defer restoreExit()
+
+	stderr, restore := captureFile(t, &os.Stderr)
+	defer restore()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	restore()
+	if exitCode != 2 {
+		t.Fatalf("expected exit code 2, got %d", exitCode)
+	}
+	if !bytes.Contains(stderr.Bytes(), []byte("stdout fallback")) {
+		t.Fatalf("expected stdout fallback, got %q", stderr.Bytes())
+	}
+}
+
+func TestRunAndEmitExitCodeDefaultsToOne(t *testing.T) {
+	cfg := runConfig{
+		runner: fakeRunner{
+			err: errors.New("failed"),
+		},
+	}
+
+	var exitCode int
+	restoreExit := overrideExit(t, func(code int) { exitCode = code })
+	defer restoreExit()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", exitCode)
+	}
+}
+
+type fakeRunner struct {
+	outBytes []byte
+	errBytes []byte
+	exitCode int
+	err      error
+}
+
+func (r fakeRunner) Run(_ context.Context, _ ainvoke.Invocation, _ ...ainvoke.RunOption) ([]byte, []byte, int, error) {
+	return r.outBytes, r.errBytes, r.exitCode, r.err
+}
+
+func captureFile(t *testing.T, file **os.File) (*bytes.Buffer, func()) {
+	t.Helper()
+
+	old := *file
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+
+	*file = w
+
+	var buf bytes.Buffer
+	done := make(chan struct{})
+	var once sync.Once
+	go func() {
+		_, _ = io.Copy(&buf, r)
+		_ = r.Close()
+		close(done)
+	}()
+
+	return &buf, func() {
+		once.Do(func() {
+			_ = w.Close()
+			*file = old
+			<-done
+		})
+	}
+}
+
+func overrideExit(t *testing.T, fn func(int)) func() {
+	t.Helper()
+
+	orig := exitFn
+	exitFn = fn
+
+	return func() {
+		exitFn = orig
 	}
 }

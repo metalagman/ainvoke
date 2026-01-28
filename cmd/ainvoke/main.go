@@ -1,10 +1,8 @@
 // Package main is the entry point for the ainvoke CLI.
 package main
 
-import "os"
+import "github.com/spf13/cobra"
 
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
-		os.Exit(1)
-	}
+	cobra.CheckErr(newRootCmd().Execute())
 }

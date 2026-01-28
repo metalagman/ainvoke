@@ -2,7 +2,9 @@
 
 ## Branching & Commits
 - Branch from `master` for new work.
+- Follow the Gitflow workflow for branching and releases.
 - Use imperative, present-tense commit messages (e.g. `Add feature X`).
+- Use Conventional Commits for commit messages.
 
 ## Preferred Workflow
 - Use the locally available Go version (as specified in `go.mod`).
