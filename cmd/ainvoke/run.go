@@ -225,6 +225,7 @@ func exitWithError(code int, errBytes []byte, err error) error {
 
 	if code != 0 {
 		exitFn(code)
+
 		return nil
 	}
 
