@@ -1,0 +1,92 @@
+{
+  "budgets": {
+    "max_iterations": 5
+  },
+  "profile": "default",
+  "profiles": {
+    "codex": {
+      "agents": {
+        "act": {
+          "model": "gpt-5.2-codex",
+          "type": "codex"
+        },
+        "check": {
+          "model": "gpt-5.1-codex-mini",
+          "type": "codex"
+        },
+        "do": {
+          "model": "gpt-5.1-codex-mini",
+          "type": "codex"
+        },
+        "plan": {
+          "model": "gpt-5.2-codex",
+          "type": "codex"
+        }
+      }
+    },
+    "default": {
+      "agents": {
+        "act": {
+          "model": "gpt-5.2-codex",
+          "type": "codex"
+        },
+        "check": {
+          "model": "gpt-5.2-codex",
+          "type": "codex"
+        },
+        "do": {
+          "model": "gemini-3-flash-preview",
+          "type": "gemini"
+        },
+        "plan": {
+          "model": "gpt-5.2-codex",
+          "type": "codex"
+        }
+      }
+    },
+    "gemini": {
+      "agents": {
+        "act": {
+          "model": "gemini-3-flash-preview",
+          "type": "gemini"
+        },
+        "check": {
+          "model": "gemini-3-flash-preview",
+          "type": "gemini"
+        },
+        "do": {
+          "model": "gemini-3-flash-preview",
+          "type": "gemini"
+        },
+        "plan": {
+          "model": "gemini-3-flash-preview",
+          "type": "gemini"
+        }
+      }
+    },
+    "opencode": {
+      "agents": {
+        "act": {
+          "model": "opencode/big-pickle",
+          "type": "opencode"
+        },
+        "check": {
+          "model": "opencode/big-pickle",
+          "type": "opencode"
+        },
+        "do": {
+          "model": "opencode/big-pickle",
+          "type": "opencode"
+        },
+        "plan": {
+          "model": "opencode/big-pickle",
+          "type": "opencode"
+        }
+      }
+    }
+  },
+  "retention": {
+    "keep_days": 30,
+    "keep_last": 50
+  }
+}
