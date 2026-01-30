@@ -37,6 +37,7 @@
 - Functional options MUST be used for configuration, powered by `options-gen`.
 - Generated options MUST include validation and be called in the constructor.
 - `ExecAgent` must support schema overrides, system prompts, extra arguments, and custom `RunDir`.
+- Agents built using the ADK SHOULD use the standard `launcher` package (`google.golang.org/adk/cmd/launcher`) to provide a CLI interface that is fully compatible with `ainvoke`.
 
 ## Code Style (Google Go Style)
 - Adhere to the [Google Go Style Guide](https://google.github.io/styleguide/go/).

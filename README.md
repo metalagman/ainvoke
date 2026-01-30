@@ -237,21 +237,27 @@ agent, err := adk.NewExecAgent(
 - **`WithExecAgentOutputSchema(string)`** - Override output JSON schema
 - **`WithExecAgentRunDir(string)`** - Set custom working directory
 
-#### Complete Example
+#### Complete Example (CLI Agent)
+
+The following example shows how to create a standalone CLI agent using `ExecAgent` and the standard ADK launcher. This makes the agent fully compatible with `ainvoke` and other ADK-compliant tools.
 
 ```go
 package main
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"os"
+
 	"github.com/metalagman/ainvoke/adk"
 	"google.golang.org/adk/agent"
-	"google.golang.org/genai"
+	"google.golang.org/adk/cmd/launcher"
+	"google.golang.org/adk/cmd/launcher/full"
 )
 
 func main() {
 	// 1. Create the ExecAgent
+	// This wraps a simple bash command that greets the user.
 	myAgent, err := adk.NewExecAgent(
 		"HelloWorld",
 		"A simple greeting agent",
@@ -260,26 +266,19 @@ func main() {
 		adk.WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
 	)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create agent: %v", err)
 	}
 
-	// 2. Prepare invocation context
-	userContent := genai.NewContentFromText(`{"name": "Developer"}`, genai.RoleUser)
-	
-	// Note: In a real scenario, you'd use a real agent.InvocationContext
-	// For demonstration, we're showing the agent interface usage:
-	ctx := context.Background() 
-	
-	// 3. Run the agent
-	// Note: ExecAgent.Run returns an iter.Seq2[*session.Event, error]
-	for event, err := range myAgent.Run(nil) { // nil passed as mock context for brevity
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			continue
-		}
-		if event.LLMResponse.Content != nil {
-			fmt.Printf("Response: %s\n", event.LLMResponse.Content.Parts[0].Text)
-		}
+	// 2. Configure the ADK launcher
+	config := &launcher.Config{
+		AgentLoader: agent.NewSingleLoader(myAgent),
+	}
+
+	// 3. Execute the launcher
+	// This provides a standard CLI interface (e.g., --input, --work-dir)
+	l := full.NewLauncher()
+	if err := l.Execute(context.Background(), config, os.Args[1:]); err != nil {
+		log.Fatalf("Run failed: %v", err)
 	}
 }
 ```
