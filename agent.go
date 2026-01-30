@@ -57,17 +57,17 @@ func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 	}
 
 	if err := writeInput(inv); err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("write input: %w", err)
 	}
 
 	prompt, err := agentPrompt(inv)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("agent prompt: %w", err)
 	}
 
 	runOpts, err := resolveRunOptions(opts)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("resolve options: %w", err)
 	}
 
 	outBytes, errBytes, exitCode, runErr := r.runWithOptions(ctx, inv, []byte(prompt), runOpts)
@@ -87,7 +87,7 @@ func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 	}
 
 	if err := validateOutputSchema(inv.OutputSchema, outputPath); err != nil {
-		runErr = err
+		runErr = fmt.Errorf("validate output: %w", err)
 	}
 
 	return outBytes, errBytes, exitCode, runErr
@@ -131,7 +131,11 @@ func writeInput(inv Invocation) error {
 			return fmt.Errorf("%w: %s: %v", ErrMissingInput, inputPath, err)
 		}
 
-		return validateInputSchema(inv.InputSchema, data)
+		if err := validateInputSchema(inv.InputSchema, data); err != nil {
+			return fmt.Errorf("validate input: %w", err)
+		}
+
+		return nil
 	}
 
 	data, err := json.Marshal(inv.Input)
@@ -140,7 +144,7 @@ func writeInput(inv Invocation) error {
 	}
 
 	if err := validateInputSchema(inv.InputSchema, data); err != nil {
-		return err
+		return fmt.Errorf("validate input: %w", err)
 	}
 
 	if err := os.WriteFile(inputPath, data, inputFilePerm); err != nil {
@@ -243,7 +247,7 @@ func runCommand(
 			return stdout.Bytes(), stderr.Bytes(), exitErr.ExitCode(), err
 		}
 
-		return stdout.Bytes(), stderr.Bytes(), 0, err
+		return stdout.Bytes(), stderr.Bytes(), 0, fmt.Errorf("cmd run: %w", err)
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), 0, nil
@@ -306,7 +310,7 @@ func runCommandWithTTY(
 			return out.Bytes(), nil, exitErr.ExitCode(), err
 		}
 
-		return out.Bytes(), nil, 0, err
+		return out.Bytes(), nil, 0, fmt.Errorf("cmd wait: %w", err)
 	}
 
 	return out.Bytes(), nil, 0, nil

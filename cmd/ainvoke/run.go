@@ -198,11 +198,11 @@ func runAndEmit(ctx context.Context, cfg runConfig) error {
 
 	output, err := readOutput(cfg.runDir)
 	if err != nil {
-		return exitWithError(1, nil, err)
+		return exitWithError(1, nil, fmt.Errorf("read output: %w", err))
 	}
 
 	if _, err := os.Stdout.Write(output); err != nil {
-		return exitWithError(1, nil, err)
+		return exitWithError(1, nil, fmt.Errorf("write stdout: %w", err))
 	}
 
 	return nil
@@ -211,7 +211,12 @@ func runAndEmit(ctx context.Context, cfg runConfig) error {
 func readOutput(runDir string) ([]byte, error) {
 	outputPath := filepath.Join(runDir, ainvoke.OutputFileName)
 
-	return os.ReadFile(outputPath)
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		return nil, fmt.Errorf("read file %s: %w", outputPath, err)
+	}
+
+	return data, nil
 }
 
 func exitWithError(code int, errBytes []byte, err error) error {
