@@ -31,6 +31,13 @@
 - `codex`, `opencode`, `gemini`, and `claude` must support: `--model` (optional; can also be passed via `--extra-args`).
 - The `codex` command must enforce `exec` mode.
 
+## Agent Development Kit (ADK)
+- Provide a high-level `ExecAgent` that wraps the runner and implements the `agent.Agent` interface.
+- Constructors (e.g., `NewExecAgent`) must return concrete types (e.g., `*ExecAgent`) while accepting interfaces where appropriate.
+- Functional options MUST be used for configuration, powered by `options-gen`.
+- Generated options MUST include validation and be called in the constructor.
+- `ExecAgent` must support schema overrides, system prompts, extra arguments, and custom `RunDir`.
+
 ## Code Style (Google Go Style)
 - Adhere to the [Google Go Style Guide](https://google.github.io/styleguide/go/).
 - **Naming**: Avoid repetition (e.g., `user.Type` not `user.User`). Use noun-like names for getters.

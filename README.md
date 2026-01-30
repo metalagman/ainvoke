@@ -237,6 +237,53 @@ agent, err := adk.NewExecAgent(
 - **`WithExecAgentOutputSchema(string)`** - Override output JSON schema
 - **`WithExecAgentRunDir(string)`** - Set custom working directory
 
+#### Complete Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/metalagman/ainvoke/adk"
+	"google.golang.org/adk/agent"
+	"google.golang.org/genai"
+)
+
+func main() {
+	// 1. Create the ExecAgent
+	myAgent, err := adk.NewExecAgent(
+		"HelloWorld",
+		"A simple greeting agent",
+		[]string{"bash", "-c", "echo '{\"result\": \"Hello, '\"$(jq -r .name input.json)\"'!\"}' > output.json"},
+		adk.WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
+		adk.WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// 2. Prepare invocation context
+	userContent := genai.NewContentFromText(`{"name": "Developer"}`, genai.RoleUser)
+	
+	// Note: In a real scenario, you'd use a real agent.InvocationContext
+	// For demonstration, we're showing the agent interface usage:
+	ctx := context.Background() 
+	
+	// 3. Run the agent
+	// Note: ExecAgent.Run returns an iter.Seq2[*session.Event, error]
+	for event, err := range myAgent.Run(nil) { // nil passed as mock context for brevity
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			continue
+		}
+		if event.LLMResponse.Content != nil {
+			fmt.Printf("Response: %s\n", event.LLMResponse.Content.Parts[0].Text)
+		}
+	}
+}
+```
+
 #### RunDir Behavior
 
 - **Empty RunDir**: Uses current working directory (`.`)
