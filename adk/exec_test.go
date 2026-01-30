@@ -2,10 +2,12 @@ package adk
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/session"
@@ -74,9 +76,11 @@ func TestExecAgent(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name      string
+		input     string
+		expected  string
+		timeout   time.Duration
+		extraArgs []string
 	}{
 		{
 			name:     "greet world",
@@ -89,6 +93,19 @@ func TestExecAgent(t *testing.T) {
 			// We need a different agent for this, or just check if it contains the prompt
 			expected: "test prompt",
 		},
+		{
+			name:      "extra args",
+			input:     `{"name": "World"}`,
+			expected:  "arg1 arg2",
+			extraArgs: []string{"arg1", "arg2"},
+		},
+		{
+			name:    "timeout",
+			input:   `{"name": "World"}`,
+			timeout: 10 * time.Millisecond,
+			// helloagent doesn't sleep, so we might need a slow agent to test timeout
+			expected: "signal: killed",
+		},
 	}
 
 	for _, tt := range tests {
@@ -96,6 +113,9 @@ func TestExecAgent(t *testing.T) {
 			userContent := genai.NewContentFromText(tt.input, genai.RoleUser)
 
 			localCfg := cfg
+			localCfg.ExtraArgs = tt.extraArgs
+			localCfg.Timeout = tt.timeout
+
 			if tt.name == "prompt dump" {
 				promptDumpBin := filepath.Join(tmpDir, "promptdump")
 				promptDumpSrc := filepath.Join(wd, "..", "testdata", "promptdump", "main.go")
@@ -106,6 +126,26 @@ func TestExecAgent(t *testing.T) {
 				localCfg.Cmd = []string{promptDumpBin}
 				localCfg.Prompt = "test prompt"
 				localCfg.OutputSchema = `{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`
+			}
+
+			if tt.name == "extra args" {
+				scriptPath := filepath.Join(tmpDir, "test_args.sh")
+				scriptContent := "#!/bin/bash\necho \"{\\\"output\\\": \\\"$*\\\"}\" > output.json\n"
+				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+					t.Fatalf("failed to write script: %v", err)
+				}
+				localCfg.Cmd = []string{scriptPath}
+				localCfg.InputSchema = defaultInputSchema
+				localCfg.OutputSchema = defaultOutputSchema
+			}
+
+			if tt.name == "timeout" {
+				scriptPath := filepath.Join(tmpDir, "test_timeout.sh")
+				scriptContent := "#!/bin/bash\nsleep 1\necho \"{\\\"output\\\": \\\"done\\\"}\" > output.json\n"
+				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+					t.Fatalf("failed to write script: %v", err)
+				}
+				localCfg.Cmd = []string{scriptPath}
 			}
 
 			a, err := NewExecAgent(localCfg)
@@ -121,6 +161,10 @@ func TestExecAgent(t *testing.T) {
 			found := false
 			for event, err := range a.Run(ctx) {
 				if err != nil {
+					if tt.name == "timeout" && strings.Contains(err.Error(), tt.expected) {
+						found = true
+						break
+					}
 					t.Errorf("unexpected error: %v", err)
 					continue
 				}
@@ -135,7 +179,7 @@ func TestExecAgent(t *testing.T) {
 			}
 
 			if !found {
-				t.Error("expected at least one event with content")
+				t.Error("expected at least one event with content or expected error")
 			}
 		})
 	}

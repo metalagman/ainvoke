@@ -1,12 +1,14 @@
 package adk
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"iter"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/metalagman/ainvoke"
 	"google.golang.org/adk/agent"
@@ -25,7 +27,9 @@ type ExecAgent struct {
 	description  string
 	prompt       string
 	cmd          []string
+	extraArgs    []string
 	useTTY       bool
+	timeout      time.Duration
 	inputSchema  string
 	outputSchema string
 }
@@ -36,7 +40,9 @@ type ExecAgentConfig struct {
 	Description  string
 	Prompt       string
 	Cmd          []string
+	ExtraArgs    []string
 	UseTTY       bool
+	Timeout      time.Duration
 	InputSchema  string
 	OutputSchema string
 }
@@ -56,7 +62,9 @@ func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
 		description:  cfg.Description,
 		prompt:       cfg.Prompt,
 		cmd:          cfg.Cmd,
+		extraArgs:    cfg.ExtraArgs,
 		useTTY:       cfg.UseTTY,
+		timeout:      cfg.Timeout,
 		inputSchema:  cfg.InputSchema,
 		outputSchema: cfg.OutputSchema,
 	}
@@ -90,8 +98,13 @@ func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, e
 			Input:        a.prepareInput(userInput),
 		}
 
+		agentCmd := append([]string(nil), a.cmd...)
+		if len(a.extraArgs) > 0 {
+			agentCmd = append(agentCmd, a.extraArgs...)
+		}
+
 		runner, err := ainvoke.NewRunner(ainvoke.AgentConfig{
-			Cmd:    a.cmd,
+			Cmd:    agentCmd,
 			UseTTY: a.useTTY,
 		})
 		if err != nil {
@@ -100,7 +113,16 @@ func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, e
 			return
 		}
 
-		responseText, err := a.execute(ctx, runner, inv)
+		runCtx := context.Context(ctx)
+
+		if a.timeout > 0 {
+			var cancel context.CancelFunc
+
+			runCtx, cancel = context.WithTimeout(runCtx, a.timeout)
+			defer cancel()
+		}
+
+		responseText, err := a.execute(runCtx, runner, inv)
 		if err != nil {
 			yield(nil, err)
 
@@ -135,7 +157,7 @@ func (a *ExecAgent) prepareInput(userInput string) any {
 }
 
 func (a *ExecAgent) execute(
-	ctx agent.InvocationContext,
+	ctx context.Context,
 	runner ainvoke.Runner,
 	inv ainvoke.Invocation,
 ) (string, error) {
