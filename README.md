@@ -189,6 +189,75 @@ const outputSchema = `{"type":"string"}`
 - `WithStdout` and `WithStderr` are optional; omit them to disable streaming output (output bytes are still captured and returned).
 - `WithTTY(true)` runs the agent inside a pseudo-terminal for CLIs that require one.
 
+## Library usage
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+
+	"github.com/metalagman/ainvoke"
+)
+
+func main() {
+	runDir := "./run"
+	_ = os.MkdirAll(runDir, 0o755)
+
+	const inputSchema = `{
+  "type":"object",
+  "properties":{
+    "input":{"type":"string"}
+  },
+  "required":["input"]
+}`
+
+	const outputSchema = `{
+  "type":"object",
+  "properties":{
+    "output":{"type":"string"}
+  },
+  "required":["output"]
+}`
+
+	inv := ainvoke.Invocation{
+		RunDir: runDir,
+		SystemPrompt: `Output "Hello, <input>!" in the output field.`,
+		Input: map[string]any{
+			"input": "Ada",
+		},
+		InputSchema:  inputSchema,
+		OutputSchema: outputSchema,
+	}
+
+	cfg := ainvoke.AgentConfig{
+		Cmd: []string{"./my-agent-binary"},
+	}
+
+	runner, err := ainvoke.NewRunner(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stdout, _ := os.Create("stdout.log")
+	stderr, _ := os.Create("stderr.log")
+	defer stdout.Close()
+	defer stderr.Close()
+
+	_, _, _, err = runner.Run(
+		context.Background(),
+		inv,
+		ainvoke.WithStdout(stdout),
+		ainvoke.WithStderr(stderr),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## Agent Development Kit (ADK)
 
 The ADK provides utilities for building agent integrations, including the `ExecAgent` for executing external commands.
@@ -298,72 +367,3 @@ The `NewExecAgent` constructor includes automatic validation:
 
 ## Contributing
 Refer to `AGENTS.md` for development guidelines.
-
-## Library usage
-
-```go
-package main
-
-import (
-	"context"
-	"log"
-	"os"
-
-	"github.com/metalagman/ainvoke"
-)
-
-func main() {
-	runDir := "./run"
-	_ = os.MkdirAll(runDir, 0o755)
-
-	const inputSchema = `{
-  "type":"object",
-  "properties":{
-    "input":{"type":"string"}
-  },
-  "required":["input"]
-}`
-
-	const outputSchema = `{
-  "type":"object",
-  "properties":{
-    "output":{"type":"string"}
-  },
-  "required":["output"]
-}`
-
-	inv := ainvoke.Invocation{
-		RunDir: runDir,
-		SystemPrompt: `Output "Hello, <input>!" in the output field.`,
-		Input: map[string]any{
-			"input": "Ada",
-		},
-		InputSchema:  inputSchema,
-		OutputSchema: outputSchema,
-	}
-
-	cfg := ainvoke.AgentConfig{
-		Cmd: []string{"./my-agent-binary"},
-	}
-
-	runner, err := ainvoke.NewRunner(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stdout, _ := os.Create("stdout.log")
-	stderr, _ := os.Create("stderr.log")
-	defer stdout.Close()
-	defer stderr.Close()
-
-	_, _, _, err = runner.Run(
-		context.Background(),
-		inv,
-		ainvoke.WithStdout(stdout),
-		ainvoke.WithStderr(stderr),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-```
