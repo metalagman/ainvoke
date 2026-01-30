@@ -323,6 +323,79 @@ func TestRunStdoutStderrCapture(t *testing.T) {
 	}
 }
 
+func TestRunPromptPassed(t *testing.T) {
+	runDir := t.TempDir()
+	inv := Invocation{
+		RunDir:       runDir,
+		Input:        map[string]any{"name": "Ada"},
+		InputSchema:  helloInputSchema,
+		OutputSchema: `{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`,
+		SystemPrompt: "test prompt",
+	}
+	runner := newGoRunRunner(t, "promptdump")
+
+	_, _, exitCode, err := runner.Run(context.Background(), inv)
+	if err != nil {
+		t.Fatalf("run promptdump: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d", exitCode)
+	}
+
+	outputPath := filepath.Join(runDir, OutputFileName)
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	var got struct {
+		Prompt string `json:"prompt"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal output: %v", err)
+	}
+	if !strings.Contains(got.Prompt, "test prompt") {
+		t.Fatalf("prompt not passed to agent, got %q", got.Prompt)
+	}
+	if !strings.Contains(got.Prompt, "I/O Requirements:") {
+		t.Fatalf("prompt template not rendered, got %q", got.Prompt)
+	}
+}
+
+func TestRunPromptPassedWithTTY(t *testing.T) {
+	runDir := t.TempDir()
+	inv := Invocation{
+		RunDir:       runDir,
+		Input:        map[string]any{"name": "Ada"},
+		InputSchema:  helloInputSchema,
+		OutputSchema: `{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`,
+		SystemPrompt: "test prompt",
+	}
+	runner := newGoRunRunner(t, "promptdump")
+
+	_, _, exitCode, err := runner.Run(context.Background(), inv, WithTTY(true))
+	if err != nil {
+		t.Fatalf("run promptdump with TTY: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d", exitCode)
+	}
+
+	outputPath := filepath.Join(runDir, OutputFileName)
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	var got struct {
+		Prompt string `json:"prompt"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal output: %v", err)
+	}
+	if !strings.Contains(got.Prompt, "test prompt") {
+		t.Fatalf("prompt not passed to agent with TTY, got %q", got.Prompt)
+	}
+}
+
 func TestAgentPromptErrors(t *testing.T) {
 	runDir := t.TempDir()
 

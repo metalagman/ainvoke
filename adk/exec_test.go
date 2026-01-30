@@ -2,6 +2,9 @@ package adk
 
 import (
 	"context"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"google.golang.org/adk/agent"
@@ -49,10 +52,25 @@ func (m *mockInvocationContext) RunConfig() *agent.RunConfig {
 func (m *mockInvocationContext) EndInvocation() {}
 func (m *mockInvocationContext) Ended() bool     { return false }
 
-func TestCustomAgent(t *testing.T) {
-	a, err := NewCustomAgent()
-	if err != nil {
-		t.Fatalf("failed to create custom agent: %v", err)
+func TestExecAgent(t *testing.T) {
+	// Build the test agent
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "helloagent")
+	// Use absolute path for build source
+	wd, _ := filepath.Abs(".")
+	srcPath := filepath.Join(wd, "..", "testdata", "helloagent", "main.go")
+
+	cmd := exec.Command("go", "build", "-o", binPath, srcPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build helloagent: %v\nOutput: %s", err, string(out))
+	}
+
+	cfg := ExecAgentConfig{
+		Name:         "TestExecAgent",
+		Description:  "Testing ExecAgent",
+		Cmd:          []string{binPath},
+		InputSchema:  `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`,
+		OutputSchema: `{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`,
 	}
 
 	tests := []struct {
@@ -61,24 +79,38 @@ func TestCustomAgent(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "with input",
-			input:    "hello",
-			expected: "CustomAgent processed: hello",
+			name:     "greet world",
+			input:    `{"name": "World"}`,
+			expected: `{"result":"Hello, World!"}`,
 		},
 		{
-			name:     "empty input",
-			input:    "",
-			expected: "CustomAgent is ready to process your input.",
+			name:  "prompt dump",
+			input: `{"name": "Ada"}`,
+			// We need a different agent for this, or just check if it contains the prompt
+			expected: "test prompt",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var userContent *genai.Content
-			if tt.input != "" {
-				userContent = genai.NewContentFromText(tt.input, genai.RoleUser)
-			} else {
-				userContent = &genai.Content{Role: genai.RoleUser}
+			userContent := genai.NewContentFromText(tt.input, genai.RoleUser)
+
+			localCfg := cfg
+			if tt.name == "prompt dump" {
+				promptDumpBin := filepath.Join(tmpDir, "promptdump")
+				promptDumpSrc := filepath.Join(wd, "..", "testdata", "promptdump", "main.go")
+				cmd := exec.Command("go", "build", "-o", promptDumpBin, promptDumpSrc)
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("failed to build promptdump: %v\nOutput: %s", err, string(out))
+				}
+				localCfg.Cmd = []string{promptDumpBin}
+				localCfg.Prompt = "test prompt"
+				localCfg.OutputSchema = `{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`
+			}
+
+			a, err := NewExecAgent(localCfg)
+			if err != nil {
+				t.Fatalf("failed to create exec agent: %v", err)
 			}
 
 			ctx := &mockInvocationContext{
@@ -95,8 +127,8 @@ func TestCustomAgent(t *testing.T) {
 
 				if event.LLMResponse.Content != nil && len(event.LLMResponse.Content.Parts) > 0 {
 					got := event.LLMResponse.Content.Parts[0].Text
-					if got != tt.expected {
-						t.Errorf("got %q, want %q", got, tt.expected)
+					if !strings.Contains(got, tt.expected) {
+						t.Errorf("got %q, want it to contain %q", got, tt.expected)
 					}
 					found = true
 				}
