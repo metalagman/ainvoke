@@ -52,20 +52,25 @@ func (m *mockInvocationContext) RunConfig() *agent.RunConfig {
 }
 
 func (m *mockInvocationContext) EndInvocation() {}
-func (m *mockInvocationContext) Ended() bool     { return false }
+func (m *mockInvocationContext) Ended() bool    { return false }
 
 func TestExecAgent(t *testing.T) {
 	// Build the test agent
 	tmpDir := t.TempDir()
-	binPath := filepath.Join(tmpDir, "helloagent")
-	// Use absolute path for build source
-	wd, _ := filepath.Abs(".")
-	srcPath := filepath.Join(wd, "..", "testdata", "helloagent", "main.go")
+	origDir, _ := os.Getwd()
 
+	binPath := filepath.Join(tmpDir, "helloagent")
+	srcPath := filepath.Join(origDir, "..", "testdata", "helloagent", "main.go")
+
+	// Build from original directory where go.mod is located
 	cmd := exec.Command("go", "build", "-o", binPath, srcPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build helloagent: %v\nOutput: %s", err, string(out))
 	}
+
+	// Change to the temp directory for testing since ExecAgent now uses cwd by default
+	defer os.Chdir(origDir)
+	os.Chdir(tmpDir)
 
 	cfg := ExecAgentConfig{
 		Name:         "TestExecAgent",
@@ -118,7 +123,7 @@ func TestExecAgent(t *testing.T) {
 
 			if tt.name == "prompt dump" {
 				promptDumpBin := filepath.Join(tmpDir, "promptdump")
-				promptDumpSrc := filepath.Join(wd, "..", "testdata", "promptdump", "main.go")
+				promptDumpSrc := filepath.Join(origDir, "..", "testdata", "promptdump", "main.go")
 				cmd := exec.Command("go", "build", "-o", promptDumpBin, promptDumpSrc)
 				if out, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("failed to build promptdump: %v\nOutput: %s", err, string(out))
@@ -129,23 +134,34 @@ func TestExecAgent(t *testing.T) {
 			}
 
 			if tt.name == "extra args" {
-				scriptPath := filepath.Join(tmpDir, "test_args.sh")
+				scriptPath := "test_args.sh"
 				scriptContent := "#!/bin/bash\necho \"{\\\"output\\\": \\\"$*\\\"}\" > output.json\n"
 				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 					t.Fatalf("failed to write script: %v", err)
 				}
-				localCfg.Cmd = []string{scriptPath}
+				localCfg.Cmd = []string{"bash", scriptPath}
 				localCfg.InputSchema = defaultInputSchema
 				localCfg.OutputSchema = defaultOutputSchema
 			}
 
 			if tt.name == "timeout" {
-				scriptPath := filepath.Join(tmpDir, "test_timeout.sh")
+				scriptPath := "test_timeout.sh"
 				scriptContent := "#!/bin/bash\nsleep 1\necho \"{\\\"output\\\": \\\"done\\\"}\" > output.json\n"
 				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 					t.Fatalf("failed to write script: %v", err)
 				}
-				localCfg.Cmd = []string{scriptPath}
+				localCfg.Cmd = []string{"bash", scriptPath}
+				localCfg.InputSchema = defaultInputSchema
+				localCfg.OutputSchema = defaultOutputSchema
+			}
+
+			if tt.name == "timeout" {
+				scriptPath := "test_timeout.sh"
+				scriptContent := "#!/bin/bash\nsleep 1\necho \"{\\\"output\\\": \\\"done\\\"}\" > output.json\n"
+				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+					t.Fatalf("failed to write script: %v", err)
+				}
+				localCfg.Cmd = []string{"bash", scriptPath}
 			}
 
 			a, err := NewExecAgent(localCfg)
@@ -183,4 +199,78 @@ func TestExecAgent(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecAgent_CustomRunDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	origDir, _ := os.Getwd()
+
+	binPath := filepath.Join(tmpDir, "helloagent")
+	srcPath := filepath.Join(origDir, "..", "testdata", "helloagent", "main.go")
+
+	// Build from original directory where go.mod is located
+	cmd := exec.Command("go", "build", "-o", binPath, srcPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build helloagent: %v\nOutput: %s", err, string(out))
+	}
+
+	// Change to the temp directory for testing
+	defer os.Chdir(origDir)
+	os.Chdir(tmpDir)
+
+	// Test with custom rundir
+	customRunDir := "custom_rundir"
+	cfg := ExecAgentConfig{
+		Name:         "TestExecAgentCustomRunDir",
+		Description:  "Testing ExecAgent with custom rundir",
+		Cmd:          []string{binPath},
+		InputSchema:  `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`,
+		OutputSchema: `{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`,
+		RunDir:       customRunDir,
+	}
+
+	a, err := NewExecAgent(cfg)
+	if err != nil {
+		t.Fatalf("failed to create exec agent: %v", err)
+	}
+
+	userContent := genai.NewContentFromText(`{"name": "CustomDir"}`, genai.RoleUser)
+	ctx := &mockInvocationContext{
+		Context:     context.Background(),
+		userContent: userContent,
+	}
+
+	found := false
+	for event, err := range a.Run(ctx) {
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		if event.LLMResponse.Content != nil && len(event.LLMResponse.Content.Parts) > 0 {
+			got := event.LLMResponse.Content.Parts[0].Text
+			if !strings.Contains(got, "Hello, CustomDir!") {
+				t.Errorf("got %q, want it to contain %q", got, "Hello, CustomDir!")
+			}
+			found = true
+		}
+	}
+
+	if !found {
+		t.Error("expected at least one event with content")
+	}
+
+	// Verify that custom rundir was created and contains expected files
+	if _, err := os.Stat(customRunDir); os.IsNotExist(err) {
+		t.Errorf("custom rundir %s was not created", customRunDir)
+	}
+
+	// Check that input.json was written to the custom rundir
+	inputFile := filepath.Join(customRunDir, "input.json")
+	if _, err := os.Stat(inputFile); os.IsNotExist(err) {
+		t.Error("input.json was not created in custom rundir")
+	}
+
+	// Verify that the directory was not cleaned up (unlike temp dir)
+	// This is expected behavior for custom rundir
 }

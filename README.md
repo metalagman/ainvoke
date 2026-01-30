@@ -189,6 +189,43 @@ const outputSchema = `{"type":"string"}`
 - `WithStdout` and `WithStderr` are optional; omit them to disable streaming output (output bytes are still captured and returned).
 - `WithTTY(true)` runs the agent inside a pseudo-terminal for CLIs that require one.
 
+## Agent Development Kit (ADK)
+
+The ADK provides utilities for building agent integrations, including the `ExecAgent` for executing external commands.
+
+### ExecAgent
+
+The `ExecAgent` executes external commands and manages their input/output according to the ainvoke protocol.
+
+#### RunDir Configuration
+
+The `ExecAgent` now supports configurable rundir through the `RunDir` field in `ExecAgentConfig`:
+
+```go
+import "github.com/metalagman/ainvoke/adk"
+
+// Use custom rundir
+cfg := adk.ExecAgentConfig{
+    Name:        "MyAgent",
+    Description: "Custom agent with specific work directory",
+    Cmd:         []string{"my-agent-binary"},
+    RunDir:      "./custom-work-dir", // Uses this directory
+}
+
+// Use default rundir (current directory)
+cfgDefault := adk.ExecAgentConfig{
+    Name:        "MyAgent",
+    Description: "Custom agent using current directory",
+    Cmd:         []string{"my-agent-binary"},
+    RunDir:      "", // Empty string uses current directory
+}
+```
+
+**Behavior:**
+- **Empty RunDir**: Uses current working directory (`.`)
+- **Custom RunDir**: Creates directory if it doesn't exist, preserves after execution
+- **No cleanup**: Unlike the previous temporary directory behavior, configured directories are not automatically cleaned up
+
 ## Contributing
 Refer to `AGENTS.md` for development guidelines.
 

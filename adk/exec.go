@@ -32,6 +32,7 @@ type ExecAgent struct {
 	timeout      time.Duration
 	inputSchema  string
 	outputSchema string
+	runDir       string
 }
 
 // ExecAgentConfig defines the configuration for an ExecAgent.
@@ -45,6 +46,7 @@ type ExecAgentConfig struct {
 	Timeout      time.Duration
 	InputSchema  string
 	OutputSchema string
+	RunDir       string // Optional custom rundir; if empty, uses temp dir
 }
 
 // NewExecAgent creates a new ExecAgent instance.
@@ -67,6 +69,7 @@ func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
 		timeout:      cfg.Timeout,
 		inputSchema:  cfg.InputSchema,
 		outputSchema: cfg.OutputSchema,
+		runDir:       cfg.RunDir,
 	}
 
 	return agent.New(agent.Config{
@@ -80,13 +83,14 @@ func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
 // It processes the input from the invocation context and generates a response by executing a command.
 func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, error] {
 	return func(yield func(*session.Event, error) bool) {
-		runDir, err := os.MkdirTemp("", "ainvoke-adk-*")
+		runDir, cleanup, err := a.prepareRunDir()
 		if err != nil {
-			yield(nil, fmt.Errorf("create temp dir: %w", err))
+			yield(nil, err)
 
 			return
 		}
-		defer os.RemoveAll(runDir)
+
+		defer cleanup()
 
 		userInput := getUserInput(ctx)
 
@@ -203,6 +207,25 @@ func (a *ExecAgent) formatResponse(outputData []byte) string {
 	}
 
 	return out
+}
+
+// prepareRunDir sets up the run directory based on configuration.
+// Returns the run directory path, a cleanup function, and any error.
+func (a *ExecAgent) prepareRunDir() (string, func(), error) {
+	const dirPerm = 0755
+
+	runDir := a.runDir
+	if runDir == "" {
+		// Use current working directory as default
+		runDir = "."
+	}
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(runDir, dirPerm); err != nil {
+		return "", nil, fmt.Errorf("create rundir: %w", err)
+	}
+
+	return runDir, func() {}, nil // No cleanup for custom or default rundir
 }
 
 func parseInput(raw string) any {
