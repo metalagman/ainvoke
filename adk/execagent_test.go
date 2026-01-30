@@ -228,6 +228,9 @@ func TestExecAgent_CustomRunDir(t *testing.T) {
 
 	// Test with custom rundir
 	customRunDir := "custom_rundir"
+	if err := os.MkdirAll(customRunDir, 0755); err != nil {
+		t.Fatalf("failed to create custom rundir: %v", err)
+	}
 	
 	a, err := NewExecAgent("TestExecAgentCustomRunDir", "Testing ExecAgent with custom rundir", []string{binPath},
 		WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
@@ -264,7 +267,7 @@ func TestExecAgent_CustomRunDir(t *testing.T) {
 		t.Error("expected at least one event with content")
 	}
 
-	// Verify that custom rundir was created and contains expected files
+	// Verify that custom rundir exists and contains expected files
 	if _, err := os.Stat(customRunDir); os.IsNotExist(err) {
 		t.Errorf("custom rundir %s was not created", customRunDir)
 	}
@@ -274,7 +277,49 @@ func TestExecAgent_CustomRunDir(t *testing.T) {
 	if _, err := os.Stat(inputFile); os.IsNotExist(err) {
 		t.Error("input.json was not created in custom rundir")
 	}
+}
 
-	// Verify that the directory was not cleaned up (unlike temp dir)
-	// This is expected behavior for custom rundir
+func TestExecAgent_MissingRunDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	origDir, _ := os.Getwd()
+
+	binPath := filepath.Join(tmpDir, "helloagent")
+	srcPath := filepath.Join(origDir, "..", "testdata", "helloagent", "main.go")
+
+	cmd := exec.Command("go", "build", "-o", binPath, srcPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build helloagent: %v\nOutput: %s", err, string(out))
+	}
+
+	defer os.Chdir(origDir)
+	os.Chdir(tmpDir)
+
+	customRunDir := "nonexistent_dir"
+	
+	a, err := NewExecAgent("TestExecAgentMissingRunDir", "Testing ExecAgent with missing rundir", []string{binPath},
+		WithExecAgentRunDir(customRunDir),
+	)
+	if err != nil {
+		t.Fatalf("failed to create exec agent: %v", err)
+	}
+
+	ctx := &mockInvocationContext{
+		Context:     context.Background(),
+		userContent: genai.NewContentFromText(`{"input": "test"}`, genai.RoleUser),
+	}
+
+	errFound := false
+	for _, err := range a.Run(ctx) {
+		if err != nil {
+			if strings.Contains(err.Error(), "rundir does not exist") {
+				errFound = true
+				break
+			}
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+	if !errFound {
+		t.Error("expected error for missing rundir, but got none")
+	}
 }

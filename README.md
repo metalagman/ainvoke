@@ -355,8 +355,8 @@ func main() {
 #### RunDir Behavior
 
 - **Empty RunDir**: Uses current working directory (`.`)
-- **Custom RunDir**: Creates directory if it doesn't exist, preserves after execution
-- **No cleanup**: Unlike the previous temporary directory behavior, configured directories are not automatically cleaned up
+- **Custom RunDir**: Validates that the directory exists; returns an error otherwise
+- **Persistence**: Files created in the run directory (like `input.json` and `output.json`) are preserved after execution
 
 #### Validation
 

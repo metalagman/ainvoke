@@ -184,23 +184,23 @@ func (a *ExecAgent) formatResponse(outputData []byte) string {
 	return out
 }
 
-// prepareRunDir sets up the run directory based on configuration.
+// prepareRunDir validates that the run directory exists.
 // Returns the run directory path, a cleanup function, and any error.
 func (a *ExecAgent) prepareRunDir() (string, func(), error) {
-	const dirPerm = 0755
-
 	runDir := a.opts.runDir
 	if runDir == "" {
 		// Use current working directory as default
 		runDir = "."
 	}
 
-	// Ensure the directory exists
-	if err := os.MkdirAll(runDir, dirPerm); err != nil {
-		return "", nil, fmt.Errorf("create rundir: %w", err)
+	// Verify the directory exists
+	if info, err := os.Stat(runDir); err != nil {
+		return "", nil, fmt.Errorf("rundir does not exist: %w", err)
+	} else if !info.IsDir() {
+		return "", nil, fmt.Errorf("rundir is not a directory: %s", runDir)
 	}
 
-	return runDir, func() {}, nil // No cleanup for custom or default rundir
+	return runDir, func() {}, nil // No cleanup for existing directories
 }
 
 func parseInput(raw string) any {
