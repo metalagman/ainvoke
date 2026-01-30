@@ -165,6 +165,29 @@ func TestBuildRunConfig(t *testing.T) {
 		}
 	})
 
+	t.Run("wrap input", func(t *testing.T) {
+		opts := &agentOptions{
+			inputSchema:  defaultInputSchema,
+			outputSchema: defaultOutputSchema,
+			input:        "simple string",
+			workDir:      ".",
+		}
+		agentCmd := []string{"test-agent"}
+
+		cmd := newExecCmd()
+		cmd.Flags().Set("input", "simple string")
+
+		cfg, err := buildRunConfig(cmd, agentCmd, opts)
+		if err != nil {
+			t.Fatalf("buildRunConfig failed: %v", err)
+		}
+
+		expectedInput := map[string]any{"input": "simple string"}
+		if !reflect.DeepEqual(cfg.inv.Input, expectedInput) {
+			t.Errorf("expected wrapped input %v, got %v", expectedInput, cfg.inv.Input)
+		}
+	})
+
 	t.Run("schema error", func(t *testing.T) {
 		opts := &agentOptions{
 			inputSchema:     defaultInputSchema,

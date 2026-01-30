@@ -135,6 +135,12 @@ func buildRunConfig(cmd *cobra.Command, agentCmd []string, opts *agentOptions) (
 			return runConfig{}, err
 		}
 
+		if finalInputSchema == defaultInputSchema {
+			if s, ok := input.(string); ok {
+				input = map[string]any{"input": s}
+			}
+		}
+
 		inv.Input = input
 	}
 
