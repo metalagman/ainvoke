@@ -197,25 +197,23 @@ The ADK provides utilities for building agent integrations, including the `ExecA
 
 The `ExecAgent` executes external commands and manages their input/output according to the ainvoke protocol.
 
-#### Constructors
+#### Constructor
 
-##### NewExecAgentWithOptions (Recommended)
-
-The preferred constructor using functional options with validation:
+The `NewExecAgent` constructor uses functional options with automatic validation:
 
 ```go
 import "github.com/metalagman/ainvoke/adk"
 import "time"
 
 // Minimal configuration
-agent, err := adk.NewExecAgentWithOptions(
+agent, err := adk.NewExecAgent(
     "MyAgent",                    // name (required)
     "Description of my agent",       // description (required)
     []string{"my-agent-binary"},     // cmd (required)
 )
 
 // With functional options
-agent, err := adk.NewExecAgentWithOptions(
+agent, err := adk.NewExecAgent(
     "MyAgent",
     "Description of my agent",
     []string{"my-agent-binary"},
@@ -227,20 +225,6 @@ agent, err := adk.NewExecAgentWithOptions(
     adk.WithExecAgentInputSchema(`{"type":"string"}`),
     adk.WithExecAgentOutputSchema(`{"type":"string"}`),
 )
-```
-
-##### NewExecAgent (Legacy)
-
-For backward compatibility, the original config-based constructor is still available:
-
-```go
-cfg := adk.ExecAgentConfig{
-    Name:        "MyAgent",
-    Description: "Custom agent with specific work directory",
-    Cmd:         []string{"my-agent-binary"},
-    RunDir:      "./custom-work-dir",
-}
-agent, err := adk.NewExecAgent(cfg)
 ```
 
 #### Available Options
@@ -261,7 +245,7 @@ agent, err := adk.NewExecAgent(cfg)
 
 #### Validation
 
-The `NewExecAgentWithOptions` constructor includes automatic validation:
+The `NewExecAgent` constructor includes automatic validation:
 - **Required fields**: `name`, `description`, `cmd` must be provided
 - **Command array**: Must not be empty
 - All validations are performed at construction time with clear error messages

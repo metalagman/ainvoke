@@ -16,7 +16,7 @@ type ExecAgentOptions struct {
 	runDir       string
 }
 
-func defaultExecAgentOptions() ExecAgentOptions {
+func getDefaultExecAgentOptions() ExecAgentOptions {
 	return ExecAgentOptions{
 		useTTY:       false,
 		inputSchema:  `{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}`,

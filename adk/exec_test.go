@@ -72,12 +72,9 @@ func TestExecAgent(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(tmpDir)
 
-	cfg := ExecAgentConfig{
-		Name:         "TestExecAgent",
-		Description:  "Testing ExecAgent",
-		Cmd:          []string{binPath},
-		InputSchema:  `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`,
-		OutputSchema: `{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`,
+	baseOpts := []OptExecAgentOptionsSetter{
+		WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
+		WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
 	}
 
 	tests := []struct {
@@ -117,9 +114,18 @@ func TestExecAgent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			userContent := genai.NewContentFromText(tt.input, genai.RoleUser)
 
-			localCfg := cfg
-			localCfg.ExtraArgs = tt.extraArgs
-			localCfg.Timeout = tt.timeout
+			opts := make([]OptExecAgentOptionsSetter, len(baseOpts))
+			copy(opts, baseOpts)
+
+			if len(tt.extraArgs) > 0 {
+				opts = append(opts, WithExecAgentExtraArgs(tt.extraArgs...))
+			}
+			if tt.timeout > 0 {
+				opts = append(opts, WithExecAgentTimeout(tt.timeout))
+			}
+
+			cmdPath := binPath
+			var prompt string
 
 			if tt.name == "prompt dump" {
 				promptDumpBin := filepath.Join(tmpDir, "promptdump")
@@ -128,9 +134,10 @@ func TestExecAgent(t *testing.T) {
 				if out, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("failed to build promptdump: %v\nOutput: %s", err, string(out))
 				}
-				localCfg.Cmd = []string{promptDumpBin}
-				localCfg.Prompt = "test prompt"
-				localCfg.OutputSchema = `{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`
+				cmdPath = promptDumpBin
+				prompt = "test prompt"
+				opts = append(opts, WithExecAgentPrompt(prompt))
+				opts = append(opts, WithExecAgentOutputSchema(`{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`))
 			}
 
 			if tt.name == "extra args" {
@@ -139,9 +146,19 @@ func TestExecAgent(t *testing.T) {
 				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 					t.Fatalf("failed to write script: %v", err)
 				}
-				localCfg.Cmd = []string{"bash", scriptPath}
-				localCfg.InputSchema = defaultInputSchema
-				localCfg.OutputSchema = defaultOutputSchema
+				cmdPath = "bash"
+				// For the bash script, we need to pass the script path as an argument, but NewExecAgent takes cmd as []string
+				// Wait, cmd is the command to run. If cmd is ["bash", "script.sh"], it works.
+				// In the original code: localCfg.Cmd = []string{"bash", scriptPath}
+				// So we need to handle that.
+			}
+
+			cmdArgs := []string{cmdPath}
+			if tt.name == "extra args" {
+				cmdArgs = []string{"bash", "test_args.sh"}
+				// Reset schema for this case as it uses default schema in original test
+				opts = append(opts, WithExecAgentInputSchema(defaultInputSchema))
+				opts = append(opts, WithExecAgentOutputSchema(defaultOutputSchema))
 			}
 
 			if tt.name == "timeout" {
@@ -150,21 +167,12 @@ func TestExecAgent(t *testing.T) {
 				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
 					t.Fatalf("failed to write script: %v", err)
 				}
-				localCfg.Cmd = []string{"bash", scriptPath}
-				localCfg.InputSchema = defaultInputSchema
-				localCfg.OutputSchema = defaultOutputSchema
+				cmdArgs = []string{"bash", scriptPath}
+				opts = append(opts, WithExecAgentInputSchema(defaultInputSchema))
+				opts = append(opts, WithExecAgentOutputSchema(defaultOutputSchema))
 			}
 
-			if tt.name == "timeout" {
-				scriptPath := "test_timeout.sh"
-				scriptContent := "#!/bin/bash\nsleep 1\necho \"{\\\"output\\\": \\\"done\\\"}\" > output.json\n"
-				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
-					t.Fatalf("failed to write script: %v", err)
-				}
-				localCfg.Cmd = []string{"bash", scriptPath}
-			}
-
-			a, err := NewExecAgent(localCfg)
+			a, err := NewExecAgent("TestExecAgent", "Testing ExecAgent", cmdArgs, opts...)
 			if err != nil {
 				t.Fatalf("failed to create exec agent: %v", err)
 			}
@@ -220,16 +228,12 @@ func TestExecAgent_CustomRunDir(t *testing.T) {
 
 	// Test with custom rundir
 	customRunDir := "custom_rundir"
-	cfg := ExecAgentConfig{
-		Name:         "TestExecAgentCustomRunDir",
-		Description:  "Testing ExecAgent with custom rundir",
-		Cmd:          []string{binPath},
-		InputSchema:  `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`,
-		OutputSchema: `{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`,
-		RunDir:       customRunDir,
-	}
-
-	a, err := NewExecAgent(cfg)
+	
+	a, err := NewExecAgent("TestExecAgentCustomRunDir", "Testing ExecAgent with custom rundir", []string{binPath},
+		WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
+		WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
+		WithExecAgentRunDir(customRunDir),
+	)
 	if err != nil {
 		t.Fatalf("failed to create exec agent: %v", err)
 	}

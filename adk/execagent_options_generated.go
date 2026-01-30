@@ -21,7 +21,7 @@ func NewExecAgentOptions(
 	var o ExecAgentOptions
 
 	// Setting defaults from func
-	defaultOpts := defaultExecAgentOptions()
+	defaultOpts := getDefaultExecAgentOptions()
 	o.name = defaultOpts.name
 	o.description = defaultOpts.description
 	o.prompt = defaultOpts.prompt

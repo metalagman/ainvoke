@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestNewExecAgentWithOptions(t *testing.T) {
+func TestNewExecAgent(t *testing.T) {
 	tests := []struct {
 		name    string
 		options []OptExecAgentOptionsSetter
@@ -38,7 +38,7 @@ func TestNewExecAgentWithOptions(t *testing.T) {
 			// Create a mock command that just outputs a simple response
 			cmd := []string{"sh", "-c", "echo '{\"output\":\"test\"}' > output.json"}
 
-			agent, err := NewExecAgentWithOptions(
+			agent, err := NewExecAgent(
 				"TestAgent",
 				"Test description",
 				cmd,
@@ -46,7 +46,7 @@ func TestNewExecAgentWithOptions(t *testing.T) {
 			)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewExecAgentWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewExecAgent() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -61,7 +61,7 @@ func TestNewExecAgentWithOptions(t *testing.T) {
 func TestExecAgentOptionsValidation(t *testing.T) {
 	cmd := []string{"sh", "-c", "echo 'test'"}
 
-	_, err := NewExecAgentWithOptions(
+	_, err := NewExecAgent(
 		"", // empty name
 		"Test description",
 		cmd,
@@ -75,34 +75,4 @@ func TestExecAgentOptionsValidation(t *testing.T) {
 	if err != nil && err.Error() == "" {
 		t.Error("Expected non-empty error message")
 	}
-}
-
-func TestExecAgentConfigCompatibility(t *testing.T) {
-	// Test that the old ExecAgentConfig still works
-	cfg := ExecAgentConfig{
-		Name:        "TestAgent",
-		Description: "Test description",
-		Cmd:         []string{"sh", "-c", "echo '{\"output\":\"test\"}' > output.json"},
-		Prompt:      "test prompt",
-		UseTTY:      true,
-		RunDir:      "./test-work",
-	}
-
-	agent, err := NewExecAgent(cfg)
-	if err != nil {
-		t.Fatalf("NewExecAgent() error = %v", err)
-	}
-
-	if agent == nil {
-		t.Error("Expected non-nil agent")
-	}
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

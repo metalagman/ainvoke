@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/metalagman/ainvoke"
 	"google.golang.org/adk/agent"
@@ -26,43 +25,8 @@ type ExecAgent struct {
 	opts ExecAgentOptions
 }
 
-// ExecAgentConfig defines the configuration for an ExecAgent.
-type ExecAgentConfig struct {
-	Name         string
-	Description  string
-	Prompt       string
-	Cmd          []string
-	ExtraArgs    []string
-	UseTTY       bool
-	Timeout      time.Duration
-	InputSchema  string
-	OutputSchema string
-	RunDir       string // Optional custom rundir; if empty, uses temp dir
-}
-
-// NewExecAgent creates a new ExecAgent instance from ExecAgentConfig.
-func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
-	if cfg.InputSchema == "" {
-		cfg.InputSchema = defaultInputSchema
-	}
-
-	if cfg.OutputSchema == "" {
-		cfg.OutputSchema = defaultOutputSchema
-	}
-
-	return NewExecAgentWithOptions(cfg.Name, cfg.Description, cfg.Cmd,
-		WithExecAgentPrompt(cfg.Prompt),
-		WithExecAgentExtraArgs(cfg.ExtraArgs...),
-		WithExecAgentUseTTY(cfg.UseTTY),
-		WithExecAgentTimeout(cfg.Timeout),
-		WithExecAgentInputSchema(cfg.InputSchema),
-		WithExecAgentOutputSchema(cfg.OutputSchema),
-		WithExecAgentRunDir(cfg.RunDir),
-	)
-}
-
-// NewExecAgentWithOptions creates a new ExecAgent instance using functional options.
-func NewExecAgentWithOptions(
+// NewExecAgent creates a new ExecAgent instance using functional options.
+func NewExecAgent(
 	name string,
 	description string,
 	cmd []string,
