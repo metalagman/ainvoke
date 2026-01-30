@@ -22,6 +22,7 @@ const (
 
 // ExecAgent is an agent implementation that executes an external command.
 type ExecAgent struct {
+	agent.Agent
 	opts ExecAgentOptions
 }
 
@@ -31,7 +32,7 @@ func NewExecAgent(
 	description string,
 	cmd []string,
 	setters ...OptExecAgentOptionsSetter,
-) (agent.Agent, error) {
+) (*ExecAgent, error) {
 	opts := NewExecAgentOptions(name, description, cmd, setters...)
 	if err := opts.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid options: %w", err)
@@ -39,11 +40,18 @@ func NewExecAgent(
 
 	a := &ExecAgent{opts: opts}
 
-	return agent.New(agent.Config{
+	ag, err := agent.New(agent.Config{
 		Name:        a.opts.name,
 		Description: a.opts.description,
 		Run:         a.Run,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("create agent: %w", err)
+	}
+
+	a.Agent = ag
+
+	return a, nil
 }
 
 // Run implements the agent.Agent interface.

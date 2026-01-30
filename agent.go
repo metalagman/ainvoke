@@ -36,20 +36,20 @@ type Invocation struct {
 }
 
 // NewRunner constructs a runner for the given agent config.
-func NewRunner(cfg AgentConfig) (Runner, error) {
+func NewRunner(cfg AgentConfig) (*ExecRunner, error) {
 	if len(cfg.Cmd) == 0 {
 		return nil, fmt.Errorf("agent requires cmd")
 	}
 
-	return &execRunner{cmd: cfg.Cmd, useTTY: cfg.UseTTY}, nil
+	return &ExecRunner{cmd: cfg.Cmd, useTTY: cfg.UseTTY}, nil
 }
 
-type execRunner struct {
+type ExecRunner struct {
 	cmd    []string
 	useTTY bool
 }
 
-func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption) ([]byte, []byte, int, error) {
+func (r *ExecRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption) ([]byte, []byte, int, error) {
 	if len(opts) == 0 {
 		opts = append(opts, WithTTY(r.useTTY))
 	} else {
@@ -93,7 +93,7 @@ func (r *execRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 	return outBytes, errBytes, exitCode, runErr
 }
 
-func (r *execRunner) runWithOptions(
+func (r *ExecRunner) runWithOptions(
 	ctx context.Context,
 	inv Invocation,
 	stdin []byte,

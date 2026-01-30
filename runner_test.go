@@ -494,7 +494,7 @@ func helloInvocation(runDir string, input any) Invocation {
 	}
 }
 
-func newGoRunRunner(t *testing.T, agentName string) Runner {
+func newGoRunRunner(t *testing.T, agentName string) *ExecRunner {
 	t.Helper()
 	t.Setenv("GOCACHE", t.TempDir())
 	agentPath := filepath.Join(repoRoot(t), "testdata", agentName, "main.go")
