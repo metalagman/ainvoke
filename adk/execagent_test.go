@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -108,6 +109,22 @@ func TestExecAgent(t *testing.T) {
 			// helloagent doesn't sleep, so we might need a slow agent to test timeout
 			expected: "signal: killed",
 		},
+		{
+			name:     "custom schema raw output",
+			input:    `{"name": "World"}`,
+			expected: `{"result":"Hello, World!"}`,
+			// When custom schema is used, formatResponse should return raw output
+		},
+		{
+			name:     "invalid output json",
+			input:    `{"name": "World"}`,
+			expected: `invalid json`,
+		},
+		{
+			name:     "missing output field",
+			input:    `{"name": "World"}`,
+			expected: `{"something":"else"}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -138,6 +155,60 @@ func TestExecAgent(t *testing.T) {
 				prompt = "test prompt"
 				opts = append(opts, WithExecAgentPrompt(prompt))
 				opts = append(opts, WithExecAgentOutputSchema(`{"type":"object","properties":{"prompt":{"type":"string"}},"required":["prompt"]}`))
+			}
+
+			if tt.name == "custom schema raw output" {
+				opts = append(opts, WithExecAgentOutputSchema(`{"type":"object"}`))
+			}
+
+			if tt.name == "invalid output json" {
+				scriptPath := "invalid_json.sh"
+				scriptContent := "#!/bin/bash\necho -n \"invalid json\" > output.json\n"
+				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+					t.Fatalf("failed to write script: %v", err)
+				}
+				cmdPath = "bash"
+				cmdArgs := []string{"bash", scriptPath}
+				opts = append(opts, WithExecAgentInputSchema(defaultInputSchema))
+				opts = append(opts, WithExecAgentOutputSchema(defaultOutputSchema))
+				a, _ := NewExecAgent("TestExecAgent", "Testing", cmdArgs, opts...)
+				ctx := &mockInvocationContext{Context: context.Background(), userContent: userContent}
+				errFound := false
+				for _, err := range a.Run(ctx) {
+					if err != nil {
+						if strings.Contains(err.Error(), "validate output") {
+							errFound = true
+							break
+						}
+					}
+				}
+				if !errFound { t.Error("expected validation error") }
+				return
+			}
+
+			if tt.name == "missing output field" {
+				scriptPath := "missing_field.sh"
+				scriptContent := "#!/bin/bash\necho -n \"{\\\"something\\\":\\\"else\\\"}\" > output.json\n"
+				if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+					t.Fatalf("failed to write script: %v", err)
+				}
+				cmdPath = "bash"
+				cmdArgs := []string{"bash", scriptPath}
+				opts = append(opts, WithExecAgentInputSchema(defaultInputSchema))
+				opts = append(opts, WithExecAgentOutputSchema(defaultOutputSchema))
+				a, _ := NewExecAgent("TestExecAgent", "Testing", cmdArgs, opts...)
+				ctx := &mockInvocationContext{Context: context.Background(), userContent: userContent}
+				errFound := false
+				for _, err := range a.Run(ctx) {
+					if err != nil {
+						if strings.Contains(err.Error(), "validate output") {
+							errFound = true
+							break
+						}
+					}
+				}
+				if !errFound { t.Error("expected validation error") }
+				return
 			}
 
 			if tt.name == "extra args" {
@@ -321,5 +392,60 @@ func TestExecAgent_MissingRunDir(t *testing.T) {
 
 	if !errFound {
 		t.Error("expected error for missing rundir, but got none")
+	}
+}
+
+func TestGetUserInput(t *testing.T) {
+	t.Run("with content", func(t *testing.T) {
+		ctx := &mockInvocationContext{
+			userContent: genai.NewContentFromText("hello", genai.RoleUser),
+		}
+		got := getUserInput(ctx)
+		if got != "hello" {
+			t.Errorf("got %q, want %q", got, "hello")
+		}
+	})
+
+	t.Run("nil content", func(t *testing.T) {
+		ctx := &mockInvocationContext{
+			userContent: nil,
+		}
+		got := getUserInput(ctx)
+		if got != "" {
+			t.Errorf("got %q, want %q", got, "")
+		}
+	})
+
+	t.Run("empty parts", func(t *testing.T) {
+		ctx := &mockInvocationContext{
+			userContent: &genai.Content{Parts: []*genai.Part{}},
+		}
+		got := getUserInput(ctx)
+		if got != "" {
+			t.Errorf("got %q, want %q", got, "")
+		}
+	})
+}
+
+func TestParseInput(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected any
+	}{
+		{name: "empty", input: "  ", expected: ""},
+		{name: "plain", input: "hello", expected: "hello"},
+		{name: "json object", input: `{"a":1}`, expected: map[string]any{"a": float64(1)}},
+		{name: "json array", input: `[1,2]`, expected: []any{float64(1), float64(2)}},
+		{name: "invalid json", input: `{"a":1`, expected: `{"a":1`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseInput(tt.input)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("got %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }

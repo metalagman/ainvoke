@@ -35,6 +35,11 @@ type Invocation struct {
 	OutputSchema string
 }
 
+type ExecRunner struct {
+	cmd    []string
+	useTTY bool
+}
+
 // NewRunner constructs a runner for the given agent config.
 func NewRunner(cfg AgentConfig) (*ExecRunner, error) {
 	if len(cfg.Cmd) == 0 {
@@ -42,11 +47,6 @@ func NewRunner(cfg AgentConfig) (*ExecRunner, error) {
 	}
 
 	return &ExecRunner{cmd: cfg.Cmd, useTTY: cfg.UseTTY}, nil
-}
-
-type ExecRunner struct {
-	cmd    []string
-	useTTY bool
 }
 
 func (r *ExecRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption) ([]byte, []byte, int, error) {

@@ -23,6 +23,7 @@ const (
 // ExecAgent is an agent implementation that executes an external command.
 type ExecAgent struct {
 	agent.Agent
+
 	opts ExecAgentOptions
 }
 
