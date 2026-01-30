@@ -23,16 +23,7 @@ const (
 
 // ExecAgent is an agent implementation that executes an external command.
 type ExecAgent struct {
-	name         string
-	description  string
-	prompt       string
-	cmd          []string
-	extraArgs    []string
-	useTTY       bool
-	timeout      time.Duration
-	inputSchema  string
-	outputSchema string
-	runDir       string
+	opts ExecAgentOptions
 }
 
 // ExecAgentConfig defines the configuration for an ExecAgent.
@@ -49,7 +40,7 @@ type ExecAgentConfig struct {
 	RunDir       string // Optional custom rundir; if empty, uses temp dir
 }
 
-// NewExecAgent creates a new ExecAgent instance.
+// NewExecAgent creates a new ExecAgent instance from ExecAgentConfig.
 func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
 	if cfg.InputSchema == "" {
 		cfg.InputSchema = defaultInputSchema
@@ -59,22 +50,34 @@ func NewExecAgent(cfg ExecAgentConfig) (agent.Agent, error) {
 		cfg.OutputSchema = defaultOutputSchema
 	}
 
-	a := &ExecAgent{
-		name:         cfg.Name,
-		description:  cfg.Description,
-		prompt:       cfg.Prompt,
-		cmd:          cfg.Cmd,
-		extraArgs:    cfg.ExtraArgs,
-		useTTY:       cfg.UseTTY,
-		timeout:      cfg.Timeout,
-		inputSchema:  cfg.InputSchema,
-		outputSchema: cfg.OutputSchema,
-		runDir:       cfg.RunDir,
+	return NewExecAgentWithOptions(cfg.Name, cfg.Description, cfg.Cmd,
+		WithExecAgentPrompt(cfg.Prompt),
+		WithExecAgentExtraArgs(cfg.ExtraArgs...),
+		WithExecAgentUseTTY(cfg.UseTTY),
+		WithExecAgentTimeout(cfg.Timeout),
+		WithExecAgentInputSchema(cfg.InputSchema),
+		WithExecAgentOutputSchema(cfg.OutputSchema),
+		WithExecAgentRunDir(cfg.RunDir),
+	)
+}
+
+// NewExecAgentWithOptions creates a new ExecAgent instance using functional options.
+func NewExecAgentWithOptions(
+	name string,
+	description string,
+	cmd []string,
+	setters ...OptExecAgentOptionsSetter,
+) (agent.Agent, error) {
+	opts := NewExecAgentOptions(name, description, cmd, setters...)
+	if err := opts.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
+	a := &ExecAgent{opts: opts}
+
 	return agent.New(agent.Config{
-		Name:        a.name,
-		Description: a.description,
+		Name:        a.opts.name,
+		Description: a.opts.description,
 		Run:         a.Run,
 	})
 }
@@ -96,20 +99,20 @@ func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, e
 
 		inv := ainvoke.Invocation{
 			RunDir:       runDir,
-			SystemPrompt: a.prompt,
-			InputSchema:  a.inputSchema,
-			OutputSchema: a.outputSchema,
+			SystemPrompt: a.opts.prompt,
+			InputSchema:  a.opts.inputSchema,
+			OutputSchema: a.opts.outputSchema,
 			Input:        a.prepareInput(userInput),
 		}
 
-		agentCmd := append([]string(nil), a.cmd...)
-		if len(a.extraArgs) > 0 {
-			agentCmd = append(agentCmd, a.extraArgs...)
+		agentCmd := append([]string(nil), a.opts.cmd...)
+		if len(a.opts.extraArgs) > 0 {
+			agentCmd = append(agentCmd, a.opts.extraArgs...)
 		}
 
 		runner, err := ainvoke.NewRunner(ainvoke.AgentConfig{
 			Cmd:    agentCmd,
-			UseTTY: a.useTTY,
+			UseTTY: a.opts.useTTY,
 		})
 		if err != nil {
 			yield(nil, fmt.Errorf("create runner: %w", err))
@@ -119,10 +122,10 @@ func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, e
 
 		runCtx := context.Context(ctx)
 
-		if a.timeout > 0 {
+		if a.opts.timeout > 0 {
 			var cancel context.CancelFunc
 
-			runCtx, cancel = context.WithTimeout(runCtx, a.timeout)
+			runCtx, cancel = context.WithTimeout(runCtx, a.opts.timeout)
 			defer cancel()
 		}
 
@@ -135,7 +138,7 @@ func (a *ExecAgent) Run(ctx agent.InvocationContext) iter.Seq2[*session.Event, e
 
 		event := session.NewEvent(ctx.InvocationID())
 		event.LLMResponse.Content = genai.NewContentFromText(responseText, genai.RoleModel)
-		event.Author = a.name
+		event.Author = a.opts.name
 
 		if !yield(event, nil) {
 			return
@@ -153,7 +156,7 @@ func getUserInput(ctx agent.InvocationContext) string {
 }
 
 func (a *ExecAgent) prepareInput(userInput string) any {
-	if a.inputSchema == defaultInputSchema {
+	if a.opts.inputSchema == defaultInputSchema {
 		return map[string]any{"input": userInput}
 	}
 
@@ -187,7 +190,7 @@ func (a *ExecAgent) execute(
 }
 
 func (a *ExecAgent) formatResponse(outputData []byte) string {
-	if a.outputSchema != defaultOutputSchema {
+	if a.opts.outputSchema != defaultOutputSchema {
 		return string(outputData)
 	}
 
@@ -214,7 +217,7 @@ func (a *ExecAgent) formatResponse(outputData []byte) string {
 func (a *ExecAgent) prepareRunDir() (string, func(), error) {
 	const dirPerm = 0755
 
-	runDir := a.runDir
+	runDir := a.opts.runDir
 	if runDir == "" {
 		// Use current working directory as default
 		runDir = "."

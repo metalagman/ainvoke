@@ -197,34 +197,74 @@ The ADK provides utilities for building agent integrations, including the `ExecA
 
 The `ExecAgent` executes external commands and manages their input/output according to the ainvoke protocol.
 
-#### RunDir Configuration
+#### Constructors
 
-The `ExecAgent` now supports configurable rundir through the `RunDir` field in `ExecAgentConfig`:
+##### NewExecAgentWithOptions (Recommended)
+
+The preferred constructor using functional options with validation:
 
 ```go
 import "github.com/metalagman/ainvoke/adk"
+import "time"
 
-// Use custom rundir
+// Minimal configuration
+agent, err := adk.NewExecAgentWithOptions(
+    "MyAgent",                    // name (required)
+    "Description of my agent",       // description (required)
+    []string{"my-agent-binary"},     // cmd (required)
+)
+
+// With functional options
+agent, err := adk.NewExecAgentWithOptions(
+    "MyAgent",
+    "Description of my agent",
+    []string{"my-agent-binary"},
+    adk.WithExecAgentPrompt("Custom system prompt"),
+    adk.WithExecAgentUseTTY(true),
+    adk.WithExecAgentTimeout(30*time.Second),
+    adk.WithExecAgentRunDir("./work-dir"),
+    adk.WithExecAgentExtraArgs("--verbose", "--debug"),
+    adk.WithExecAgentInputSchema(`{"type":"string"}`),
+    adk.WithExecAgentOutputSchema(`{"type":"string"}`),
+)
+```
+
+##### NewExecAgent (Legacy)
+
+For backward compatibility, the original config-based constructor is still available:
+
+```go
 cfg := adk.ExecAgentConfig{
     Name:        "MyAgent",
     Description: "Custom agent with specific work directory",
     Cmd:         []string{"my-agent-binary"},
-    RunDir:      "./custom-work-dir", // Uses this directory
+    RunDir:      "./custom-work-dir",
 }
-
-// Use default rundir (current directory)
-cfgDefault := adk.ExecAgentConfig{
-    Name:        "MyAgent",
-    Description: "Custom agent using current directory",
-    Cmd:         []string{"my-agent-binary"},
-    RunDir:      "", // Empty string uses current directory
-}
+agent, err := adk.NewExecAgent(cfg)
 ```
 
-**Behavior:**
+#### Available Options
+
+- **`WithExecAgentPrompt(string)`** - Set system prompt
+- **`WithExecAgentExtraArgs(...string)`** - Add command arguments (variadic)
+- **`WithExecAgentUseTTY(bool)`** - Enable/disable pseudo-terminal
+- **`WithExecAgentTimeout(time.Duration)`** - Set execution timeout
+- **`WithExecAgentInputSchema(string)`** - Override input JSON schema
+- **`WithExecAgentOutputSchema(string)`** - Override output JSON schema
+- **`WithExecAgentRunDir(string)`** - Set custom working directory
+
+#### RunDir Behavior
+
 - **Empty RunDir**: Uses current working directory (`.`)
 - **Custom RunDir**: Creates directory if it doesn't exist, preserves after execution
 - **No cleanup**: Unlike the previous temporary directory behavior, configured directories are not automatically cleaned up
+
+#### Validation
+
+The `NewExecAgentWithOptions` constructor includes automatic validation:
+- **Required fields**: `name`, `description`, `cmd` must be provided
+- **Command array**: Must not be empty
+- All validations are performed at construction time with clear error messages
 
 ## Contributing
 Refer to `AGENTS.md` for development guidelines.
