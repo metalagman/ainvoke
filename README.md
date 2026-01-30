@@ -38,7 +38,7 @@ ainvoke <command> [flags]
 - `--prompt`
 - `--input`
 - `--extra-args`
-- `--work-dir`
+- `--work-dir` (must already exist; returns an error otherwise)
 - `--debug` (forward agent stdout/stderr to stderr)
 
 ### quickstart
@@ -181,7 +181,7 @@ const outputSchema = `{"type":"string"}`
 ## Notes
 
 - Ensure the agent CLI specified by `cmd` is installed and available on `PATH`.
-- `RunDir` must already exist; the runner does not create it.
+- `RunDir` must already exist; the runner does not create it and returns an error if it is missing.
 - The runner writes `input.json` from `Invocation.Input` (or expects it to already exist if `Input` is nil).
 - The runner validates `input.json` against `InputSchema` before running the agent.
 - The agent must write `output.json` in `RunDir`; on success the runner validates it against `OutputSchema`.
