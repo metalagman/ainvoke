@@ -4,6 +4,7 @@ package adk
 
 import (
 	fmt461e464ebed9 "fmt"
+	"io"
 	"time"
 
 	errors461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/errors"
@@ -32,6 +33,8 @@ func NewExecAgentOptions(
 	o.inputSchema = defaultOpts.inputSchema
 	o.outputSchema = defaultOpts.outputSchema
 	o.runDir = defaultOpts.runDir
+	o.stdout = defaultOpts.stdout
+	o.stderr = defaultOpts.stderr
 
 	o.name = name
 	o.description = description
@@ -69,6 +72,14 @@ func WithExecAgentOutputSchema(opt string) OptExecAgentOptionsSetter {
 
 func WithExecAgentRunDir(opt string) OptExecAgentOptionsSetter {
 	return func(o *ExecAgentOptions) { o.runDir = opt }
+}
+
+func WithExecAgentStdout(opt io.Writer) OptExecAgentOptionsSetter {
+	return func(o *ExecAgentOptions) { o.stdout = opt }
+}
+
+func WithExecAgentStderr(opt io.Writer) OptExecAgentOptionsSetter {
+	return func(o *ExecAgentOptions) { o.stderr = opt }
 }
 
 func (o *ExecAgentOptions) Validate() error {

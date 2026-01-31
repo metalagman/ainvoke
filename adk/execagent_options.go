@@ -1,6 +1,9 @@
 package adk
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
 //go:generate go tool options-gen -from-struct=ExecAgentOptions -out-filename=execagent_options_generated.go -out-prefix=ExecAgent -defaults-from=func
 type ExecAgentOptions struct {
@@ -14,6 +17,8 @@ type ExecAgentOptions struct {
 	inputSchema  string
 	outputSchema string
 	runDir       string
+	stdout       io.Writer
+	stderr       io.Writer
 }
 
 func getDefaultExecAgentOptions() ExecAgentOptions {

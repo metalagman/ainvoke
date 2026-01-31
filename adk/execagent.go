@@ -141,7 +141,16 @@ func (a *ExecAgent) execute(
 	runner ainvoke.Runner,
 	inv ainvoke.Invocation,
 ) (string, error) {
-	outBytes, errBytes, _, err := runner.Run(ctx, inv)
+	var runOpts []ainvoke.RunOption
+	if a.opts.stdout != nil {
+		runOpts = append(runOpts, ainvoke.WithStdout(a.opts.stdout))
+	}
+
+	if a.opts.stderr != nil {
+		runOpts = append(runOpts, ainvoke.WithStderr(a.opts.stderr))
+	}
+
+	outBytes, errBytes, _, err := runner.Run(ctx, inv, runOpts...)
 	if err != nil {
 		if len(errBytes) == 0 && len(outBytes) > 0 {
 			errBytes = outBytes

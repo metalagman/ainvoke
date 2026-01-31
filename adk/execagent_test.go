@@ -1,6 +1,7 @@
 package adk
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -277,6 +278,68 @@ func TestExecAgent(t *testing.T) {
 				t.Error("expected at least one event with content or expected error")
 			}
 		})
+	}
+}
+
+func TestExecAgent_Streams(t *testing.T) {
+	tmpDir := t.TempDir()
+	origDir, _ := os.Getwd()
+
+	binPath := filepath.Join(tmpDir, "stdouterr")
+	srcPath := filepath.Join(origDir, "..", "testdata", "stdouterr", "main.go")
+
+	cmd := exec.Command("go", "build", "-o", binPath, srcPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build stdouterr: %v\nOutput: %s", err, string(out))
+	}
+
+	defer os.Chdir(origDir)
+	os.Chdir(tmpDir)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+
+	a, err := NewExecAgent("TestExecAgentStreams", "Testing ExecAgent streams", []string{binPath},
+		WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
+		WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
+		WithExecAgentStdout(&stdoutBuf),
+		WithExecAgentStderr(&stderrBuf),
+	)
+	if err != nil {
+		t.Fatalf("failed to create exec agent: %v", err)
+	}
+
+	userContent := genai.NewContentFromText(`{"name": "Streams"}`, genai.RoleUser)
+	ctx := &mockInvocationContext{
+		Context:     context.Background(),
+		userContent: userContent,
+	}
+
+	found := false
+	for event, err := range a.Run(ctx) {
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		if event.LLMResponse.Content != nil && len(event.LLMResponse.Content.Parts) > 0 {
+			got := event.LLMResponse.Content.Parts[0].Text
+			if !strings.Contains(got, "Hello, Streams!") {
+				t.Errorf("got %q, want it to contain %q", got, "Hello, Streams!")
+			}
+			found = true
+		}
+	}
+
+	if !found {
+		t.Error("expected at least one event with content")
+	}
+
+	if !strings.Contains(stdoutBuf.String(), "stdout line") {
+		t.Errorf("stdout buffer missing 'stdout line', got: %q", stdoutBuf.String())
+	}
+
+	if !strings.Contains(stderrBuf.String(), "stderr line") {
+		t.Errorf("stderr buffer missing 'stderr line', got: %q", stderrBuf.String())
 	}
 }
 
