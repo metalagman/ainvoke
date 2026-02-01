@@ -49,7 +49,22 @@ func NewRunner(cfg AgentConfig) (*ExecRunner, error) {
 	return &ExecRunner{cmd: cfg.Cmd, useTTY: cfg.UseTTY}, nil
 }
 
-func (r *ExecRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption) ([]byte, []byte, int, error) {
+func (r *ExecRunner) Run(
+	ctx context.Context,
+	inv Invocation,
+	opts ...RunOption,
+) (outBytes, errBytes []byte, exitCode int, err error) {
+	if inv.RunDir == "" {
+		inv.RunDir = "."
+	}
+
+	absRunDir, err := filepath.Abs(inv.RunDir)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("absolute path for rundir: %w", err)
+	}
+
+	inv.RunDir = absRunDir
+
 	if len(opts) == 0 {
 		opts = append(opts, WithTTY(r.useTTY))
 	} else {
@@ -70,27 +85,37 @@ func (r *ExecRunner) Run(ctx context.Context, inv Invocation, opts ...RunOption)
 		return nil, nil, 0, fmt.Errorf("resolve options: %w", err)
 	}
 
-	outBytes, errBytes, exitCode, runErr := r.runWithOptions(ctx, inv, []byte(prompt), runOpts)
-	if runErr != nil {
+	outBytes, errBytes, exitCode, err = r.runWithOptions(ctx, inv, []byte(prompt), runOpts)
+	if err != nil {
 		if exitCode != 0 {
-			runErr = fmt.Errorf("exit code %d: %w", exitCode, errors.Join(ErrRunFailed, runErr))
+			err = fmt.Errorf("exit code %d: %w", exitCode, errors.Join(ErrRunFailed, err))
 		}
 
-		return outBytes, errBytes, exitCode, runErr
+		return outBytes, errBytes, exitCode, err
 	}
 
-	outputPath := filepath.Join(inv.RunDir, OutputFileName)
-	if _, err := os.Stat(outputPath); err != nil {
-		outputErr := fmt.Errorf("%w: %s: %v", ErrMissingOutput, outputPath, err)
+	if err := r.processOutput(inv); err != nil {
+		return outBytes, errBytes, exitCode, err
+	}
 
-		return outBytes, errBytes, exitCode, outputErr
+	return outBytes, errBytes, exitCode, nil
+}
+
+func (r *ExecRunner) processOutput(inv Invocation) error {
+	outputPath, err := filepath.Abs(filepath.Join(inv.RunDir, OutputFileName))
+	if err != nil {
+		return fmt.Errorf("absolute output path: %w", err)
+	}
+
+	if _, err := os.Stat(outputPath); err != nil {
+		return fmt.Errorf("%w: %s: %v", ErrMissingOutput, outputPath, err)
 	}
 
 	if err := validateOutputSchema(inv.OutputSchema, outputPath); err != nil {
-		runErr = fmt.Errorf("validate output: %w", err)
+		return fmt.Errorf("validate output: %w", err)
 	}
 
-	return outBytes, errBytes, exitCode, runErr
+	return nil
 }
 
 func (r *ExecRunner) runWithOptions(
@@ -98,7 +123,7 @@ func (r *ExecRunner) runWithOptions(
 	inv Invocation,
 	stdin []byte,
 	runOpts RunOptions,
-) ([]byte, []byte, int, error) {
+) (outBytes, errBytes []byte, exitCode int, err error) {
 	if runOpts.tty {
 		return runCommandWithTTY(
 			ctx,
@@ -120,7 +145,11 @@ func (r *ExecRunner) runWithOptions(
 }
 
 func writeInput(inv Invocation) error {
-	inputPath := filepath.Join(inv.RunDir, InputFileName)
+	inputPath, err := filepath.Abs(filepath.Join(inv.RunDir, InputFileName))
+	if err != nil {
+		return fmt.Errorf("absolute input path: %w", err)
+	}
+
 	if _, err := os.Stat(inv.RunDir); err != nil {
 		return fmt.Errorf("%w: %s: %v", ErrMissingRunDir, inv.RunDir, err)
 	}
@@ -216,7 +245,7 @@ func runCommand(
 	stdin []byte,
 	stdoutSink io.Writer,
 	stderrSink io.Writer,
-) ([]byte, []byte, int, error) {
+) (stdoutBytes, stderrBytes []byte, exitCode int, err error) {
 	if len(argv) == 0 {
 		return nil, nil, 0, fmt.Errorf("agent command is empty")
 	}
@@ -259,7 +288,7 @@ func runCommandWithTTY(
 	workDir string,
 	stdin []byte,
 	stdoutSink io.Writer,
-) ([]byte, []byte, int, error) {
+) (stdoutBytes, stderrBytes []byte, exitCode int, err error) {
 	if len(argv) == 0 {
 		return nil, nil, 0, fmt.Errorf("agent command is empty")
 	}
@@ -317,19 +346,26 @@ func runCommandWithTTY(
 }
 
 func agentPrompt(inv Invocation) (string, error) {
-	inputPath := filepath.Join(inv.RunDir, InputFileName)
-	outputPath := filepath.Join(inv.RunDir, OutputFileName)
+	inputPath, err := filepath.Abs(filepath.Join(inv.RunDir, InputFileName))
+	if err != nil {
+		return "", fmt.Errorf("absolute input path: %w", err)
+	}
+
+	outputPath, err := filepath.Abs(filepath.Join(inv.RunDir, OutputFileName))
+	if err != nil {
+		return "", fmt.Errorf("absolute output path: %w", err)
+	}
 
 	if _, err := os.Stat(inputPath); err != nil {
 		return "", fmt.Errorf("stat %s: %w", inputPath, err)
 	}
 
 	if strings.TrimSpace(inv.InputSchema) == "" {
-		return "", fmt.Errorf("input schema is empty")
+		return "", ErrInputSchemaEmpty
 	}
 
 	if strings.TrimSpace(inv.OutputSchema) == "" {
-		return "", fmt.Errorf("output schema is empty")
+		return "", ErrOutputSchemaEmpty
 	}
 
 	data := promptData{
