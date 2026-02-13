@@ -326,13 +326,13 @@ import (
 
 func main() {
 	// 1. Create the ExecAgent
-	// This wraps a simple bash command that greets the user.
+	// This wraps the codex CLI in exec mode.
 	myAgent, err := adk.NewExecAgent(
-		"HelloWorld",
-		"A simple greeting agent",
-		[]string{"bash", "-c", "echo '{\"result\": \"Hello, '\"$(jq -r .name input.json)\"'!\"}' > output.json"},
-		adk.WithExecAgentInputSchema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`),
-		adk.WithExecAgentOutputSchema(`{"type":"object","properties":{"result":{"type":"string"}},"required":["result"]}`),
+		"CodexAssistant",
+		"A codex-backed assistant agent",
+		[]string{"codex", "exec", "--sandbox", "workspace-write"},
+		adk.WithExecAgentInputSchema(`{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}`),
+		adk.WithExecAgentOutputSchema(`{"type":"object","properties":{"output":{"type":"string"}},"required":["output"]}`),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
