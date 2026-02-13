@@ -237,6 +237,102 @@ func TestRunInputWriteError(t *testing.T) {
 	}
 }
 
+func TestRemoveStaleOutput(t *testing.T) {
+	t.Run("missing output file", func(t *testing.T) {
+		runDir := t.TempDir()
+		if err := removeStaleOutput(runDir); err != nil {
+			t.Fatalf("remove stale output: %v", err)
+		}
+	})
+
+	t.Run("removes stale output file", func(t *testing.T) {
+		runDir := t.TempDir()
+		outputPath := filepath.Join(runDir, OutputFileName)
+		if err := os.WriteFile(outputPath, []byte(`{"result":"stale"}`), 0o644); err != nil {
+			t.Fatalf("write stale output: %v", err)
+		}
+
+		if err := removeStaleOutput(runDir); err != nil {
+			t.Fatalf("remove stale output: %v", err)
+		}
+
+		if _, err := os.Stat(outputPath); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected output file to be removed, stat err = %v", err)
+		}
+	})
+
+	t.Run("remove error", func(t *testing.T) {
+		runDir := t.TempDir()
+		outputPath := filepath.Join(runDir, OutputFileName)
+		if err := os.Mkdir(outputPath, 0o755); err != nil {
+			t.Fatalf("mkdir output path: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(outputPath, "keep"), []byte("x"), 0o644); err != nil {
+			t.Fatalf("write nested file: %v", err)
+		}
+
+		err := removeStaleOutput(runDir)
+		if err == nil {
+			t.Fatal("expected remove error")
+		}
+		if !strings.Contains(err.Error(), "remove") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestWriteInputRemovesStaleOutputWithExistingInput(t *testing.T) {
+	runDir := t.TempDir()
+	inputPath := filepath.Join(runDir, InputFileName)
+	if err := os.WriteFile(inputPath, []byte(`{"name":"Ada"}`), 0o644); err != nil {
+		t.Fatalf("write input: %v", err)
+	}
+	outputPath := filepath.Join(runDir, OutputFileName)
+	if err := os.WriteFile(outputPath, []byte(`{"result":"stale"}`), 0o644); err != nil {
+		t.Fatalf("write stale output: %v", err)
+	}
+
+	inv := Invocation{
+		RunDir:       runDir,
+		InputSchema:  helloInputSchema,
+		OutputSchema: helloOutputSchema,
+	}
+
+	if err := writeInput(inv); err != nil {
+		t.Fatalf("write input: %v", err)
+	}
+
+	if _, err := os.Stat(outputPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected output file removed, stat err = %v", err)
+	}
+}
+
+func TestWriteInputStaleOutputRemovalError(t *testing.T) {
+	runDir := t.TempDir()
+	outputPath := filepath.Join(runDir, OutputFileName)
+	if err := os.Mkdir(outputPath, 0o755); err != nil {
+		t.Fatalf("mkdir output path: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(outputPath, "keep"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("write nested file: %v", err)
+	}
+
+	inv := Invocation{
+		RunDir:       runDir,
+		Input:        map[string]any{"name": "Ada"},
+		InputSchema:  helloInputSchema,
+		OutputSchema: helloOutputSchema,
+	}
+
+	err := writeInput(inv)
+	if err == nil {
+		t.Fatal("expected stale output removal error")
+	}
+	if !strings.Contains(err.Error(), "remove stale output") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRunOptionsValidation(t *testing.T) {
 	runDir := t.TempDir()
 	inv := helloInvocation(runDir, map[string]any{"name": "Ada"})

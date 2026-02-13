@@ -8,8 +8,8 @@
 
 ## Preferred Workflow
 - Use the locally available Go version (as specified in `go.mod`).
-- Run `go tool golangci-lint run ./...` before pushing.
-- Ensure `go test ./...` passes.
+- Always run quality gates before finishing work: `go tool golangci-lint run ./...` and `go test ./...`.
+- After quality gates pass, commit and push the changes before considering the task complete.
 
 ## Runtime Requirements
 - Validate `Invocation.Input` (or `input.json` when `Input` is nil) against `InputSchema` before running the agent.

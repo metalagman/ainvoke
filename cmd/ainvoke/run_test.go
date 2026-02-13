@@ -8,10 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/metalagman/ainvoke"
+	"github.com/spf13/cobra"
 )
 
 func TestResolveSchema(t *testing.T) {
@@ -203,6 +206,30 @@ func TestBuildRunConfig(t *testing.T) {
 	})
 }
 
+func TestAddModelFlagRequired(t *testing.T) {
+	opts := &agentOptions{}
+	cmd := &cobra.Command{
+		Use: "test",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return nil
+		},
+	}
+
+	if err := addModelFlag(cmd, opts, true); err != nil {
+		t.Fatalf("addModelFlag failed: %v", err)
+	}
+
+	cmd.SetArgs([]string{})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected error for missing required --model")
+	}
+
+	cmd.SetArgs([]string{"--model", "gpt-5"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("expected command to pass with --model, got: %v", err)
+	}
+}
+
 func TestReadOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	content := []byte(`{"result":"ok"}`)
@@ -327,6 +354,67 @@ func TestRunAndEmitExitCodeDefaultsToOne(t *testing.T) {
 	}
 }
 
+func TestRunAndEmitReadOutputError(t *testing.T) {
+	cfg := runConfig{
+		runDir: t.TempDir(),
+		runner: fakeRunner{},
+	}
+
+	var exitCode int
+	restoreExit := overrideExit(t, func(code int) { exitCode = code })
+	defer restoreExit()
+
+	stderr, restore := captureFile(t, &os.Stderr)
+	defer restore()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	restore()
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", exitCode)
+	}
+	if !strings.Contains(stderr.String(), "read output") {
+		t.Fatalf("expected read output error, got %q", stderr.String())
+	}
+}
+
+func TestRunAndEmitWithTTYDebugAndTimeout(t *testing.T) {
+	tmpDir := t.TempDir()
+	expected := []byte(`{"output":"ok"}`)
+	if err := os.WriteFile(filepath.Join(tmpDir, ainvoke.OutputFileName), expected, 0o644); err != nil {
+		t.Fatalf("write output: %v", err)
+	}
+
+	runner := &captureRunner{}
+	cfg := runConfig{
+		runDir:  tmpDir,
+		runner:  runner,
+		useTTY:  true,
+		debug:   true,
+		timeout: 10 * time.Millisecond,
+	}
+
+	stdout, restore := captureFile(t, &os.Stdout)
+	defer restore()
+
+	if err := runAndEmit(context.Background(), cfg); err != nil {
+		t.Fatalf("runAndEmit: %v", err)
+	}
+
+	restore()
+	if !bytes.Equal(stdout.Bytes(), expected) {
+		t.Fatalf("expected stdout %q, got %q", expected, stdout.Bytes())
+	}
+	if runner.gotRunOpts != 4 {
+		t.Fatalf("expected 4 run opts, got %d", runner.gotRunOpts)
+	}
+	if !runner.hasDeadline {
+		t.Fatal("expected timeout context deadline to be set")
+	}
+}
+
 type fakeRunner struct {
 	outBytes []byte
 	errBytes []byte
@@ -336,6 +424,17 @@ type fakeRunner struct {
 
 func (r fakeRunner) Run(_ context.Context, _ ainvoke.Invocation, _ ...ainvoke.RunOption) ([]byte, []byte, int, error) {
 	return r.outBytes, r.errBytes, r.exitCode, r.err
+}
+
+type captureRunner struct {
+	gotRunOpts  int
+	hasDeadline bool
+}
+
+func (r *captureRunner) Run(ctx context.Context, _ ainvoke.Invocation, opts ...ainvoke.RunOption) ([]byte, []byte, int, error) {
+	r.gotRunOpts = len(opts)
+	_, r.hasDeadline = ctx.Deadline()
+	return nil, nil, 0, nil
 }
 
 func captureFile(t *testing.T, file **os.File) (*bytes.Buffer, func()) {
