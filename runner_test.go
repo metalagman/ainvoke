@@ -262,6 +262,24 @@ func TestRunMissingOutput(t *testing.T) {
 	}
 }
 
+func TestRunMissingOutputWithStaleOutputFile(t *testing.T) {
+	runDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(runDir, OutputFileName), []byte(`{"result":"stale"}`), 0o644); err != nil {
+		t.Fatalf("write stale output: %v", err)
+	}
+
+	inv := helloInvocation(runDir, map[string]any{"name": "Ada"})
+	runner := newGoRunRunner(t, "nooutput")
+
+	_, _, _, err := runner.Run(context.Background(), inv)
+	if err == nil {
+		t.Fatal("expected error for missing fresh output file")
+	}
+	if !errors.Is(err, ErrMissingOutput) {
+		t.Fatalf("expected ErrMissingOutput, got %v", err)
+	}
+}
+
 func TestRunOutputSchemaInvalid(t *testing.T) {
 	runDir := t.TempDir()
 	inv := helloInvocation(runDir, map[string]any{"name": "Ada"})

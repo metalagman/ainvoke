@@ -75,6 +75,10 @@ func (r *ExecRunner) Run(
 		return nil, nil, 0, fmt.Errorf("write input: %w", err)
 	}
 
+	if err := removeStaleOutput(inv.RunDir); err != nil {
+		return nil, nil, 0, fmt.Errorf("remove stale output: %w", err)
+	}
+
 	prompt, err := agentPrompt(inv)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("agent prompt: %w", err)
@@ -99,6 +103,15 @@ func (r *ExecRunner) Run(
 	}
 
 	return outBytes, errBytes, exitCode, nil
+}
+
+func removeStaleOutput(runDir string) error {
+	outputPath := filepath.Join(runDir, OutputFileName)
+	if err := os.Remove(outputPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove %s: %w", outputPath, err)
+	}
+
+	return nil
 }
 
 func (r *ExecRunner) processOutput(inv Invocation) error {
