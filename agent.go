@@ -75,10 +75,6 @@ func (r *ExecRunner) Run(
 		return nil, nil, 0, fmt.Errorf("write input: %w", err)
 	}
 
-	if err := removeStaleOutput(inv.RunDir); err != nil {
-		return nil, nil, 0, fmt.Errorf("remove stale output: %w", err)
-	}
-
 	prompt, err := agentPrompt(inv)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("agent prompt: %w", err)
@@ -177,7 +173,7 @@ func writeInput(inv Invocation) error {
 			return fmt.Errorf("validate input: %w", err)
 		}
 
-		return nil
+		return removeStaleOutput(inv.RunDir)
 	}
 
 	data, err := json.Marshal(inv.Input)
@@ -191,6 +187,10 @@ func writeInput(inv Invocation) error {
 
 	if err := os.WriteFile(inputPath, data, inputFilePerm); err != nil {
 		return fmt.Errorf("write %s: %w", inputPath, err)
+	}
+
+	if err := removeStaleOutput(inv.RunDir); err != nil {
+		return fmt.Errorf("remove stale output: %w", err)
 	}
 
 	return nil
