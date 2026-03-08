@@ -6,20 +6,53 @@
 [![test](https://github.com/metalagman/ainvoke/actions/workflows/test.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/test.yml)
 [![codecov](https://codecov.io/github/metalagman/ainvoke/graph/badge.svg)](https://codecov.io/github/metalagman/ainvoke)
 [![version](https://img.shields.io/github/v/release/metalagman/ainvoke?sort=semver)](https://github.com/metalagman/ainvoke/releases)
+[![npm](https://img.shields.io/npm/v/%40metalagman%2Fainvoke)](https://www.npmjs.com/package/@metalagman/ainvoke)
+[![PyPI](https://img.shields.io/pypi/v/ainvoke)](https://pypi.org/project/ainvoke/)
 [![license](https://img.shields.io/github/license/metalagman/ainvoke)](LICENSE)
 
 ainvoke provides a focused runner for invoking agent CLIs with a normalized JSON I/O contract.
 
 ## Installation
 
-### Pre-built binaries
-
-Download the latest pre-built binaries for your platform from the [GitHub Releases](https://github.com/metalagman/ainvoke/releases) page.
-
-### From source
+### Go
 
 ```bash
-go get github.com/metalagman/ainvoke
+go install github.com/metalagman/ainvoke/cmd/ainvoke@latest
+```
+
+### npm (Node.js)
+
+```bash
+npx @metalagman/ainvoke quickstart
+
+# Or install globally
+npm install -g @metalagman/ainvoke
+ainvoke quickstart
+```
+
+### uv / pip (Python)
+
+```bash
+uvx ainvoke quickstart
+
+# Or install
+uv pip install ainvoke
+ainvoke quickstart
+```
+
+### Pre-built binaries
+
+Download pre-built binaries from [GitHub Releases](https://github.com/metalagman/ainvoke/releases):
+
+```bash
+# Linux/macOS
+curl -L https://github.com/metalagman/ainvoke/releases/latest/download/ainvoke-linux-amd64 -o ainvoke
+chmod +x ainvoke
+sudo mv ainvoke /usr/local/bin/
+
+# Verify checksum (recommended)
+curl -L https://github.com/metalagman/ainvoke/releases/latest/download/checksums.txt -o checksums.txt
+sha256sum -c checksums.txt
 ```
 
 ## CLI
