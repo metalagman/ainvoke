@@ -82,6 +82,14 @@ Displays a guide with common usage examples and instructions for all supported a
 ainvoke quickstart
 ```
 
+### version
+
+Prints the build version, git commit, and build date embedded at build time.
+
+```bash
+ainvoke version
+```
+
 ### exec (generic runner)
 
 Flags:

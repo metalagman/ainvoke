@@ -18,6 +18,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newGeminiCmd())
 	root.AddCommand(newClaudeCmd())
 	root.AddCommand(newQuickstartCmd())
+	root.AddCommand(newVersionCmd())
 
 	return root
 }

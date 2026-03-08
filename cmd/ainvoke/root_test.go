@@ -17,7 +17,7 @@ func TestRootCmd(t *testing.T) {
 		t.Errorf("expected use 'ainvoke', got '%s'", cmd.Use)
 	}
 
-	subCommands := []string{"exec", "codex", "opencode", "gemini", "claude", "quickstart"}
+	subCommands := []string{"exec", "codex", "opencode", "gemini", "claude", "quickstart", "version"}
 	for _, sub := range subCommands {
 		found := false
 		for _, c := range cmd.Commands() {
@@ -53,5 +53,32 @@ func TestQuickstartCmd(t *testing.T) {
 
 	if b.Len() == 0 {
 		t.Error("expected quickstart output, got nothing")
+	}
+}
+
+func TestVersionCmd(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	cmd := newVersionCmd()
+	cmd.SetArgs([]string{})
+
+	if err := cmd.Execute(); err != nil {
+		os.Stdout = old
+		t.Fatalf("version failed: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+
+	var b bytes.Buffer
+	_, _ = io.Copy(&b, r)
+
+	if b.Len() == 0 {
+		t.Fatal("expected version output, got nothing")
+	}
+	if got := b.String(); got[:16] != "ainvoke version " {
+		t.Fatalf("version output = %q, want version banner prefix", got)
 	}
 }
