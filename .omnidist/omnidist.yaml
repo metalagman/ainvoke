@@ -1,0 +1,33 @@
+tool:
+  name: ainvoke
+  main: ./cmd/ainvoke
+version:
+  source: git-tag
+targets:
+  - os: darwin
+    arch: amd64
+  - os: darwin
+    arch: arm64
+  - os: linux
+    arch: amd64
+  - os: linux
+    arch: arm64
+  - os: windows
+    arch: amd64
+build:
+  ldflags: >
+    -s -w
+    -X github.com/metalagman/ainvoke/cmd/ainvoke.version=${OMNIDIST_VERSION}
+    -X github.com/metalagman/ainvoke/cmd/ainvoke.gitCommit=${OMNIDIST_GIT_COMMIT}
+    -X github.com/metalagman/ainvoke/cmd/ainvoke.buildDate=${OMNIDIST_BUILD_DATE}
+  tags: []
+  cgo: false
+distributions:
+  npm:
+    package: '@metalagman/ainvoke'
+    registry: https://registry.npmjs.org
+    access: public
+  uv:
+    package: ainvoke
+    index-url: https://upload.pypi.org/legacy/
+    linux-tag: manylinux2014
