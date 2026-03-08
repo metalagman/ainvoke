@@ -1,14 +1,13 @@
 # ainvoke
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalagman/ainvoke)](https://goreportcard.com/report/github.com/metalagman/ainvoke)
-[![Go Reference](https://pkg.go.dev/badge/github.com/metalagman/ainvoke.svg)](https://pkg.go.dev/github.com/metalagman/ainvoke)
-[![lint](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/lint.yml)
-[![test](https://github.com/metalagman/ainvoke/actions/workflows/test.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/test.yml)
+[![ci](https://github.com/metalagman/ainvoke/actions/workflows/ci.yml/badge.svg)](https://github.com/metalagman/ainvoke/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/metalagman/ainvoke/graph/badge.svg)](https://codecov.io/github/metalagman/ainvoke)
 [![version](https://img.shields.io/github/v/release/metalagman/ainvoke?sort=semver)](https://github.com/metalagman/ainvoke/releases)
 [![npm](https://img.shields.io/npm/v/%40metalagman%2Fainvoke)](https://www.npmjs.com/package/@metalagman/ainvoke)
 [![PyPI](https://img.shields.io/pypi/v/ainvoke)](https://pypi.org/project/ainvoke/)
 [![license](https://img.shields.io/github/license/metalagman/ainvoke)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/metalagman/ainvoke.svg)](https://pkg.go.dev/github.com/metalagman/ainvoke)
 
 ainvoke provides a focused runner for invoking agent CLIs with a normalized JSON I/O contract.
 
